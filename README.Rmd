@@ -1,0 +1,6 @@
+---
+title: "2025 Big Ten Baseball Standings Predictor"
+author: "kylegilber"
+date: "`r Sys.Date()`"
+output: github_document
+---
