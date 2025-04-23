@@ -4,3 +4,15 @@ author: "kylegilber"
 date: "`r Sys.Date()`"
 output: github_document
 ---
+
+```{r, message= f, warning= f, echo= f}
+
+### IMPORTS
+
+# Add packages
+library(dplyr)
+library(tidyr)
+
+# Load workspace image
+load("~/Github/big-ten-baseball-model/data.RData")
+```
