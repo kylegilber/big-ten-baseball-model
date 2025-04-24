@@ -42,9 +42,13 @@ summarise_pitcher <- function(data) {
   reduce(counts, left_join, by = "Pitcher") %>% 
     left_join(innings, by = "Pitcher") %>% 
     mutate(
+      
+      # Fielding independent pitching (FIP)
       FIP = (13*HomeRun + 3*(Walk + HitByPitch) - 2*Strikeout)/Innings + 4.22,
+      
+      # # Strikeouts & walks per nine innings (K/9, BB/9)
       K9 = (Strikeout / Innings) * 9, BB9 = (Walk / Innings) * 9
-  )
+    )
 }
 
 # Define summary function ∀ batters
@@ -55,8 +59,24 @@ summarise_batter <- function(data) {
       count(Batter, .data[[.x]]) %>% 
       pivot_wider(names_from = .data[[.x]], values_from = n, values_fill = 0))
   
-  # Join data frames by pitcher
-  reduce(counts, left_join, by = "Batter")
+  # Count plate attempts ∀ batters
+  appearances <- data %>% 
+    distinct(Batter, Inning, PAofInning, Date) %>% 
+    count(Batter, name = "PA")
+  
+  # Join data frames by batter
+  reduce(counts, left_join, by = "Batter") %>% 
+    left_join(appearances, by = "Batter") %>% 
+    mutate(
+      
+      # Weighted on-base average (wOBA)
+      wOBA = (0.812 * Walk + 0.838 * HitByPitch + 0.943 * Single +
+        1.271 * Double + 1.616 * Triple + 1.764 * HomeRun) / 
+        (PA + Walk + Sacrifice + HitByPitch),
+      
+      # Strikeout & walk percentage (K%, BB%)
+      KPercent = Strikeout / PA, BBPercent = Walk / PA
+    )
 }
 ```
 
