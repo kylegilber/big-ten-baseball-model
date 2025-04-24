@@ -132,49 +132,22 @@ summarise_batter <- function(data, name) {
 
 ### DATA MERGING ###
 
-# Summarize batting statistics for each team
-batting <- summarise_batter(ILL_ILL_B, "Illinois") %>% 
-  rbind(summarise_batter(IU_B, "Indiana")) %>% 
-  rbind(summarise_batter(IOW_HAW_B, "Iowa")) %>% 
-  rbind(summarise_batter(MAR_TER_B, "Maryland")) %>% 
-  rbind(summarise_batter(MIC_WOL_B, "Michigan")) %>% 
-  rbind(summarise_batter(MIC_SPA_B, "Michigan State")) %>% 
-  rbind(summarise_batter(MIN_GOP_B, "Minnesota")) %>% 
-  rbind(summarise_batter(NEB_B, "Nebraska")) %>% 
-  rbind(summarise_batter(NOR_CAT_B, "Northwestern")) %>% 
-  rbind(summarise_batter(OSU_BUC_B, "Ohio State")) %>% 
-  rbind(summarise_batter(ORE_DUC_B, "Oregon")) %>% 
-  rbind(summarise_batter(PEN_NIT_B, "Penn State")) %>% 
-  rbind(summarise_batter(PUR_BOI_B, "Purdue")) %>% 
-  rbind(summarise_batter(RUT_SCA_B, "Rutgers")) %>% 
-  rbind(summarise_batter(UCLA_B, "UCLA")) %>% 
-  rbind(summarise_batter(SOU_TRO_B, "USC")) %>% 
-  rbind(summarise_batter(WAS_HUS_B, "Washington"))
+# List universities with baseball teams in the big ten conference
+teams <- list("ILL_ILL", "IU", "IOW_HAW", "MAR_TER", "MIC_WOL", "MIC_SPA", 
+  "MIN_GOP", "NEB", "NOR_CAT", "OSU_BUC", "ORE_DUC", "PEN_NIT", "PUR_BOI",
+  "RUT_SCA", "UCLA", "SOU_TRO", "WAS_HUS")
 
-# Summarize pitching statistics for each team
-pitching <- summarise_pitcher(ILL_ILL_P, "Illinois") %>% 
-  rbind(summarise_pitcher(IU_P, "Indiana")) %>% 
-  rbind(summarise_pitcher(IOW_HAW_P, "Iowa")) %>% 
-  rbind(summarise_pitcher(MAR_TER_P, "Maryland")) %>% 
-  rbind(summarise_pitcher(MIC_WOL_P, "Michigan")) %>% 
-  rbind(summarise_pitcher(MIC_SPA_P, "Michigan State")) %>% 
-  rbind(summarise_pitcher(MIN_GOP_P, "Minnesota")) %>% 
-  rbind(summarise_pitcher(NEB_P, "Nebraska")) %>% 
-  rbind(summarise_pitcher(NOR_CAT_P, "Northwestern")) %>% 
-  rbind(summarise_pitcher(OSU_BUC_P, "Ohio State")) %>% 
-  rbind(summarise_pitcher(ORE_DUC_P, "Oregon")) %>% 
-  rbind(summarise_pitcher(PEN_NIT_P, "Penn State")) %>% 
-  rbind(summarise_pitcher(PUR_BOI_P, "Purdue")) %>% 
-  rbind(summarise_pitcher(RUT_SCA_P, "Rutgers")) %>% 
-  rbind(summarise_pitcher(UCLA_P, "UCLA")) %>% 
-  rbind(summarise_pitcher(SOU_TRO_P, "USC")) %>% 
-  rbind(summarise_pitcher(WAS_HUS_P, "Washington"))
+# Summarize batting statistics for each team's 2025 roster
+batting <- map2_dfr(teams, teams, ~summarise_batter(get(paste0(.x, "_B")), .y))
 
-# Merge team pitching & batting data
-data <- pitching %>% left_join(batting, join_by(Team))
+# Summarize pitching statistics for each team's 2025 roster
+pitching <- map2_dfr(teams, teams, ~summarise_pitcher(get(paste0(.x, "_P")), .y))
+
+# Merge team pitching & batting data for 2025 rosters
+data25 <- pitching %>% left_join(batting, join_by(Team))
 
 # Remove temporary variables
-rm(batting, pitching, cols, summarise_batter, summarise_pitcher,
-  list= ls(pattern = "_"))
+rm(batting, pitching, cols, summarise_batter, summarise_pitcher, teams,
+  list = ls(pattern = "_"))
 ```
 
