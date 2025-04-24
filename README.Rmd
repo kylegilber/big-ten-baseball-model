@@ -50,7 +50,8 @@ summarise_pitcher <- function(data, name) {
       K9 = (Strikeout / Innings) * 9, BB9 = (Walk / Innings) * 9,
       
       # Walks & hits per inning pitched
-      WHIP = (Walk + Single + Double + Triple + HomeRun) / Innings
+      WHIP = (Walk + Single + Double + 
+        tryCatch({Triple}, error = function(cond) {0}) + HomeRun) / Innings
     ) %>% 
     
     # Filter pitchers by innings pitched
@@ -94,14 +95,15 @@ summarise_batter <- function(data, name) {
       
       # Weighted on-base average (wOBA)
       wOBA = (0.812 * Walk + 0.838 * HitByPitch + 0.943 * Single +
-        1.271 * Double + 1.616 * Triple + 1.764 * HomeRun) / 
-        (PA + Walk + Sacrifice + HitByPitch),
+        1.271 * Double + 1.616 * tryCatch({Triple}, error = function(cond) {0}) +
+        1.764 * HomeRun) / (PA + Walk + Sacrifice + HitByPitch),
       
       # Strikeout & walk percentage (K%, BB%)
       KRate = Strikeout / PA, BBRate = Walk / PA,
       
       # Isolated power (ISO)
-      ISO = (Double + 2*Triple + 3*HomeRun) / PA
+      ISO = (Double + 2 * tryCatch({Triple}, error = function(cond) {0}) + 
+        3 * HomeRun) / PA
     ) %>% 
     
     # Filter batters by plate appearances
@@ -126,4 +128,53 @@ summarise_batter <- function(data, name) {
 }
 ```
 
+```{r, message= f, warning= f, echo= f}
+
+### DATA MERGING ###
+
+# Summarize batting statistics for each team
+batting <- summarise_batter(ILL_ILL_B, "Illinois") %>% 
+  rbind(summarise_batter(IU_B, "Indiana")) %>% 
+  rbind(summarise_batter(IOW_HAW_B, "Iowa")) %>% 
+  rbind(summarise_batter(MAR_TER_B, "Maryland")) %>% 
+  rbind(summarise_batter(MIC_WOL_B, "Michigan")) %>% 
+  rbind(summarise_batter(MIC_SPA_B, "Michigan State")) %>% 
+  rbind(summarise_batter(MIN_GOP_B, "Minnesota")) %>% 
+  rbind(summarise_batter(NEB_B, "Nebraska")) %>% 
+  rbind(summarise_batter(NOR_CAT_B, "Northwestern")) %>% 
+  rbind(summarise_batter(OSU_BUC_B, "Ohio State")) %>% 
+  rbind(summarise_batter(ORE_DUC_B, "Oregon")) %>% 
+  rbind(summarise_batter(PEN_NIT_B, "Penn State")) %>% 
+  rbind(summarise_batter(PUR_BOI_B, "Purdue")) %>% 
+  rbind(summarise_batter(RUT_SCA_B, "Rutgers")) %>% 
+  rbind(summarise_batter(UCLA_B, "UCLA")) %>% 
+  rbind(summarise_batter(SOU_TRO_B, "USC")) %>% 
+  rbind(summarise_batter(WAS_HUS_B, "Washington"))
+
+# Summarize pitching statistics for each team
+pitching <- summarise_pitcher(ILL_ILL_P, "Illinois") %>% 
+  rbind(summarise_pitcher(IU_P, "Indiana")) %>% 
+  rbind(summarise_pitcher(IOW_HAW_P, "Iowa")) %>% 
+  rbind(summarise_pitcher(MAR_TER_P, "Maryland")) %>% 
+  rbind(summarise_pitcher(MIC_WOL_P, "Michigan")) %>% 
+  rbind(summarise_pitcher(MIC_SPA_P, "Michigan State")) %>% 
+  rbind(summarise_pitcher(MIN_GOP_P, "Minnesota")) %>% 
+  rbind(summarise_pitcher(NEB_P, "Nebraska")) %>% 
+  rbind(summarise_pitcher(NOR_CAT_P, "Northwestern")) %>% 
+  rbind(summarise_pitcher(OSU_BUC_P, "Ohio State")) %>% 
+  rbind(summarise_pitcher(ORE_DUC_P, "Oregon")) %>% 
+  rbind(summarise_pitcher(PEN_NIT_P, "Penn State")) %>% 
+  rbind(summarise_pitcher(PUR_BOI_P, "Purdue")) %>% 
+  rbind(summarise_pitcher(RUT_SCA_P, "Rutgers")) %>% 
+  rbind(summarise_pitcher(UCLA_P, "UCLA")) %>% 
+  rbind(summarise_pitcher(SOU_TRO_P, "USC")) %>% 
+  rbind(summarise_pitcher(WAS_HUS_P, "Washington"))
+
+# Merge team pitching & batting data
+data <- pitching %>% left_join(batting, join_by(Team))
+
+# Remove temporary variables
+rm(batting, pitching, cols, summarise_batter, summarise_pitcher,
+  list= ls(pattern = "_"))
+```
 
