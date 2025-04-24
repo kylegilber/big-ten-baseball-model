@@ -7,12 +7,40 @@ output: github_document
 
 ```{r, message= f, warning= f, echo= f}
 
-### IMPORTS
+### IMPORTS ###
 
 # Add packages
 library(dplyr)
 library(tidyr)
+library(purrr)
 
 # Load workspace image
 load("~/Github/big-ten-baseball-model/data.RData")
 ```
+
+```{r, message= f, warning= f, echo= f}
+
+### TRANSFORMATIONS ###
+
+# List column variables to count
+cols <- list("PlayResult", "KorBB", "PitchCall")
+
+# Define summary function ∀ pitchers
+summarise_pitcher <- function(data) {
+  
+  # Generate a data frame for each column
+  counts <- map(cols, ~ data %>% 
+      count(Pitcher, .data[[.x]]) %>% 
+      pivot_wider(names_from = .data[[.x]], values_from = n, values_fill = 0))
+  
+  # Count innings pitched ∀ pitchers
+  innings <- data %>% 
+    distinct(Pitcher, Inning, Date) %>% 
+    count(Pitcher, name = "Innings")
+  
+  # Join data frames by pitcher
+  reduce(counts, left_join, by = "Pitcher") %>% 
+    left_join(innings, by = "Pitcher")
+}
+```
+
