@@ -40,7 +40,11 @@ summarise_pitcher <- function(data) {
   
   # Join data frames by pitcher
   reduce(counts, left_join, by = "Pitcher") %>% 
-    left_join(innings, by = "Pitcher")
+    left_join(innings, by = "Pitcher") %>% 
+    mutate(
+      FIP = (13*HomeRun + 3*(Walk + HitByPitch) - 2*Strikeout)/Innings + 4.22,
+      K9 = (Strikeout / Innings) * 9, BB9 = (Walk / Innings) * 9
+  )
 }
 
 # Define summary function ∀ batters
