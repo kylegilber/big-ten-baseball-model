@@ -42,5 +42,17 @@ summarise_pitcher <- function(data) {
   reduce(counts, left_join, by = "Pitcher") %>% 
     left_join(innings, by = "Pitcher")
 }
+
+# Define summary function ∀ batters
+summarise_batter <- function(data) {
+  
+  # Generate a data frame for each column
+  counts <- map(cols, ~ data %>% 
+      count(Batter, .data[[.x]]) %>% 
+      pivot_wider(names_from = .data[[.x]], values_from = n, values_fill = 0))
+  
+  # Join data frames by pitcher
+  reduce(counts, left_join, by = "Batter")
+}
 ```
 
