@@ -47,8 +47,13 @@ summarise_pitcher <- function(data) {
       FIP = (13*HomeRun + 3*(Walk + HitByPitch) - 2*Strikeout)/Innings + 4.22,
       
       # # Strikeouts & walks per nine innings (K/9, BB/9)
-      K9 = (Strikeout / Innings) * 9, BB9 = (Walk / Innings) * 9
-    )
+      K9 = (Strikeout / Innings) * 9, BB9 = (Walk / Innings) * 9,
+      
+      # Walks & hits per inning pitched
+      WHIP = (Walk + Single + Double + Triple + HomeRun) / Innings
+      
+      # Filter pitchers by innings pitched
+    ) %>% filter(Innings >= 5)
 }
 
 # Define summary function ∀ batters
@@ -75,8 +80,13 @@ summarise_batter <- function(data) {
         (PA + Walk + Sacrifice + HitByPitch),
       
       # Strikeout & walk percentage (K%, BB%)
-      KPercent = Strikeout / PA, BBPercent = Walk / PA
-    )
+      KRate = Strikeout / PA, BBRate = Walk / PA,
+      
+      # Isolated power (ISO)
+      ISO = (Double + 2*Triple + 3*HomeRun) / PA
+      
+      # Filter batters by plate appearances
+    ) %>% filter(PA >= 10)
 }
 ```
 
