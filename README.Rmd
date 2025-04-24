@@ -14,8 +14,11 @@ library(dplyr)
 library(tidyr)
 library(purrr)
 
-# Load workspace image
-load("~/Github/big-ten-baseball-model/data.RData")
+# Load 2024 player data 
+load("~/Github/big-ten-baseball-model/data24.RData")
+
+# Load 2024 player data with updated 2025 rosters
+load("~/Github/big-ten-baseball-model/data25.RData")
 ```
 
 ```{r, message= f, warning= f, echo= f}
@@ -128,7 +131,10 @@ summarise_batter <- function(data, name) {
 }
 ```
 
-```{r, message= f, warning= f, echo= f}
+```{r}
+#| warning: false
+#| message: false
+#| echo: false
 
 ### DATA MERGING ###
 
@@ -136,6 +142,24 @@ summarise_batter <- function(data, name) {
 teams <- list("ILL_ILL", "IU", "IOW_HAW", "MAR_TER", "MIC_WOL", "MIC_SPA", 
   "MIN_GOP", "NEB", "NOR_CAT", "OSU_BUC", "ORE_DUC", "PEN_NIT", "PUR_BOI",
   "RUT_SCA", "UCLA", "SOU_TRO", "WAS_HUS")
+  
+# Standardize Minnesota names
+MIN_GOP_H <- MIN_GOL_H
+MIN_GOP_T <- MIN_GOL_T
+rm(MIN_GOL_H, MIN_GOL_T)
+
+## 2024 ##
+
+# Summarize batting statistics for each team's 2024 roster
+batting <- map2_dfr(teams, teams, ~summarise_batter(get(paste0(.x, "_H")), .y))
+
+# Summarize pitching statistics for each team's 2024 roster
+pitching <- map2_dfr(teams, teams, ~summarise_pitcher(get(paste0(.x, "_T")), .y))
+
+# Merge team pitching & batting data for 2025 rosters
+data24 <- pitching %>% left_join(batting, join_by(Team))
+
+## 2025 ##
 
 # Summarize batting statistics for each team's 2025 roster
 batting <- map2_dfr(teams, teams, ~summarise_batter(get(paste0(.x, "_B")), .y))
