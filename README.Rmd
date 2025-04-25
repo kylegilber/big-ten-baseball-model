@@ -142,7 +142,7 @@ summarise_batter <- function(data, name) {
 teams <- list("ILL_ILL", "IU", "IOW_HAW", "MAR_TER", "MIC_WOL", "MIC_SPA", 
   "MIN_GOP", "NEB", "NOR_CAT", "OSU_BUC", "ORE_DUC", "PEN_NIT", "PUR_BOI",
   "RUT_SCA", "UCLA", "SOU_TRO", "WAS_HUS")
-  
+
 # Standardize Minnesota names
 MIN_GOP_H <- MIN_GOL_H
 MIN_GOP_T <- MIN_GOL_T
@@ -173,5 +173,11 @@ data25 <- pitching %>% left_join(batting, join_by(Team))
 # Remove temporary variables
 rm(batting, pitching, cols, summarise_batter, summarise_pitcher, teams,
   list = ls(pattern = "_"))
+
+# Create column to store conferences
+data24$League <- NA
+data24$League[c(1:10, 12:14)] <- "BIG10"
+data24$League[is.na(data24$League)] <- "PAC12"
+data25$League <- "BIG10"
 ```
 
