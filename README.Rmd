@@ -2,7 +2,7 @@
 title: "2025 Big Ten Baseball Standings Predictor"
 author: "kylegilber"
 date: "`r Sys.Date()`"
-output: github_document
+output: pdf
 ---
 
 ```{r, message= f, warning= f, echo= f}
@@ -102,7 +102,7 @@ summarise_batter <- function(data, name) {
         1.764 * HomeRun) / (PA + Walk + Sacrifice + HitByPitch),
       
       # Strikeout & walk percentage (K%, BB%)
-      KRate = Strikeout / PA, BBRate = Walk / PA,
+      `K%` = Strikeout / PA, `BB%` = Walk / PA,
       
       # Isolated power (ISO)
       ISO = (Double + 2 * tryCatch({Triple}, error = function(cond) {0}) + 
@@ -117,7 +117,7 @@ summarise_batter <- function(data, name) {
       Team = name,
       Batters = n(),
       across(
-        c(wOBA, KRate, BBRate, ISO),
+        c(wOBA, `K%`, `BB%`, ISO),
         list(
           min = ~min(.x),
           max = ~max(.x),
@@ -196,5 +196,18 @@ data24$League <- NA
 data24$League[c(1:10, 12:14)] <- "BIG10"
 data24$League[is.na(data24$League)] <- "PAC12"
 data25$League <- "BIG10"
+
+# Add 2024 in-conference win %s
+data24$`Win%` <- c(0.750, 0.625, 0.583, 0.417, 0.583, 0.458, 0.458, 0.667, 0.167,
+  0.5, 0.633, 0.5, 0.542, 0.25, 0.3, 0.586, 0.333)
+# List universities with baseball teams in the big ten conference
+teams <- list("ILL_ILL", "IU", "IOW_HAW", "MAR_TER", "MIC_WOL", "MIC_SPA", 
+  "MIN_GOP", "NEB", "NOR_CAT", "OSU_BUC", "ORE_DUC", "PEN_NIT", "PUR_BOI",
+  "RUT_SCA", "UCLA", "SOU_TRO", "WAS_HUS")
+
+# Add 2025 in-conference win %s to date 
+data25$`Win%` <- c(0.6, 0.522, 0.826, 0.3, 0.5, 0.45, 0.35, 0.4, 0.4, 0.15, 
+  0.667, 0.522, 0.3, 0.4, 0.75, 0.65, 0.65)
 ```
+
 
