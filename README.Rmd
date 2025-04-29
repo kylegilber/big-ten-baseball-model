@@ -92,7 +92,8 @@ summarise_pitcher <- function(data, name) {
         tryCatch({Triple}, error = function(cond) {0}) + HomeRun) / Innings,
       
       # Runs allowed
-      RA = `1` + 2*`2` + 3*`3` + 4*tryCatch({`4`}, error = function(cond) {0}),
+      RA = `1` + 2*`2` + 3*tryCatch({`3`}, error = function(cond) {0}) + 
+        4*tryCatch({`4`}, error = function(cond) {0}),
       
     ) %>% 
     
@@ -148,7 +149,8 @@ summarise_batter <- function(data, name) {
         3 * HomeRun) / PA,
       
       # Runs batted in (RBI)
-      RBI = `1` + 2*`2` + 3*`3` + 4*tryCatch({`4`}, error = function(cond) {0})
+      RBI = `1` + 2*`2` + 3*tryCatch({`3`}, error = function(cond) {0}) + 
+        4*tryCatch({`4`}, error = function(cond) {0})
       
     ) %>% 
     
@@ -182,56 +184,50 @@ summarise_batter <- function(data, name) {
 ### DATA MERGING ###
 
 # List universities with baseball teams in the big ten conference in 2024
-teams <- list("ILL_ILL", "IU", "IOW_HAW", "MAR_TER", "MIC_WOL", "MIC_SPA", 
+teams <- list("ILL_ILL", "IU", "IOW_HAW", "MAR_TER", "MIC_SPA", "MIC_WOL", 
   "MIN_GOL", "NEB", "NOR_CAT", "OSU_BUC", "PEN_NIT", "PUR_BOI", "RUT_SCA")
 
-## 2024 ##
+# Merge batting & pitching data ∀ teams
+merge_team_data <- function(year) {
+    
+    # Summarize batting statistics ∀ teams
+    batting <- map2_dfr(
+      teams, teams, ~summarise_batter(get(paste0(.x, "_B", toString(year))), .y)
+    )
+    
+    # Summarize pitching statistics ∀ teams
+    pitching <- map2_dfr(
+      teams, teams, ~summarise_pitcher(get(paste0(.x, "_P", toString(year))), .y)
+    )
+    
+    # Join batting & pitching by team
+    pitching %>% left_join(batting, join_by(Team))
+}
 
-# Summarize batting statistics for each team's 2024 roster
-batting <- map2_dfr(teams, teams, ~summarise_batter(get(paste0(.x, "_H")), .y))
-
-# Summarize pitching statistics for each team's 2024 roster
-pitching <- map2_dfr(teams, teams, ~summarise_pitcher(get(paste0(.x, "_T")), .y))
-
-# Merge team pitching & batting data for 2025 rosters
-data24 <- pitching %>% left_join(batting, join_by(Team))
+## 2022 ##
+data22 <- merge_team_data(22)
+data22$Year <- "2022"
+data22$`Win%` <- c(0.708,0.417,0.708,0.783,0.333,0.5,0.25,0.417,0.417,0.364,
+  0.458,0.429,0.708)
 
 ## 2023 ##
-
-# Summarize batting statistics for each team's 2023 roster
-batting <- map2_dfr(teams, teams, ~summarise_batter(get(paste0(.x, "_B23")), .y))
-
-# Summarize pitching statistics for each team's 2023 roster
-pitching <- map2_dfr(teams, teams, ~summarise_pitcher(get(paste0(.x, "_P23")), .y))
-
-# Merge team pitching & batting data for 2023 rosters
-data23 <- pitching %>% left_join(batting, join_by(Team))
-
-# Remove temporary variables
-rm(batting, pitching, cols, summarise_batter, summarise_pitcher, teams,
-  list = ls(pattern = "_"))
-```
-
-```{r}
-#| warning: false
-#| message: false
-#| echo: false
-
-### DATA TRANSFORMATIONS ###
-
-# Add 2024 in-conference win %s
-data24$`Win%` <- c(0.750, 0.625, 0.583, 0.417, 0.583, 0.458, 0.458, 0.667, 0.167,
-  0.5, 0.5, 0.542, 0.25)
-
-# Add 2025 in-conference win %s to date 
+data23 <- merge_team_data(23)
+data23$Year <- "2023"
 data23$`Win%` <- c(0.5, 0.667, 0.652, 0.708, 0.542, 0.5, 0.5, 0.625, 0.167, 
   0.375, 0.304, 0.458, 0.583)
 
-# Add year and merge
+## 2024 ##
+data24 <- merge_team_data(24)
 data24$Year <- "2024"
-data23$Year <- "2023"
-data <- rbind(data24, data23)
-rm(data23, data24)
+data24$`Win%` <- c(0.750, 0.625, 0.583, 0.417, 0.583, 0.458, 0.458, 0.667, 0.167,
+  0.5, 0.5, 0.542, 0.25)
+
+# Merge season data by year
+data <- rbind(data22,data23,data24)
+
+# Remove temporary variables
+rm(list = ls(pattern = "_"), batting, pitching, cols, summarise_batter)
+rm(list = ls(pattern = "2"), summarise_pitcher, teams, files, helper, relevel)
 ```
 
 ```{r}
