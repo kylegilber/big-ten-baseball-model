@@ -21,6 +21,7 @@ library(purrr)
 library(kableExtra)
 library(knitr)
 library(tinytex)
+library(stats)
 
 # Load 2024 player data 
 load("~/Github/big-ten-baseball-model/data24.RData")
@@ -74,7 +75,6 @@ summarise_pitcher <- function(data, name) {
     # Summarize batting statistics across team
     summarise(
       Team = name,
-      Pitchers = n(),
       across(
         c(FIP, K9, BB9, WHIP),
         list(
@@ -126,7 +126,6 @@ summarise_batter <- function(data, name) {
     # Summarize batting statistics across team
     summarise(
       Team = name,
-      Batters = n(),
       across(
         c(wOBA, `K%`, `BB%`, ISO),
         list(
@@ -163,10 +162,9 @@ rm(MIN_GOL_H, MIN_GOL_T)
 
 ### DATA MERGING ###
 
-# List universities with baseball teams in the big ten conference
+# List universities with baseball teams in the big ten conference in 2024
 teams <- list("ILL_ILL", "IU", "IOW_HAW", "MAR_TER", "MIC_WOL", "MIC_SPA", 
-  "MIN_GOP", "NEB", "NOR_CAT", "OSU_BUC", "ORE_DUC", "PEN_NIT", "PUR_BOI",
-  "RUT_SCA", "UCLA", "SOU_TRO", "WAS_HUS")
+  "MIN_GOP", "NEB", "NOR_CAT", "OSU_BUC", "PEN_NIT", "PUR_BOI", "RUT_SCA")
 
 ## 2024 ##
 
@@ -204,11 +202,11 @@ rm(batting, pitching, cols, summarise_batter, summarise_pitcher, teams,
 
 # Add 2024 in-conference win %s
 data24$`Win%` <- c(0.750, 0.625, 0.583, 0.417, 0.583, 0.458, 0.458, 0.667, 0.167,
-  0.5, 0.633, 0.5, 0.542, 0.25, 0.3, 0.586, 0.333)
+  0.5, 0.5, 0.542, 0.25)
 
 # Add 2025 in-conference win %s to date 
 data25$`Win%` <- c(0.6, 0.522, 0.826, 0.3, 0.5, 0.45, 0.35, 0.4, 0.4, 0.15, 
-  0.667, 0.522, 0.3, 0.4, 0.75, 0.65, 0.65)
+  0.522, 0.3, 0.4)
 ```
 
 ```{r}
@@ -261,6 +259,22 @@ vars %>%
     full_width = FALSE
   ) %>% 
   column_spec(3, width = "8cm")
-
-
 ```
+
+```{r}
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Get # rows in data
+size <- nrow(data24)
+
+# Perform train/test split
+indices <- sample(length(data24), prob = 0.7)
+
+model <- glm(`Win%` ~ . - `Win%`, data = data24, family = "gaussian") %>% 
+  stats::step(model, direction = "backward", trace = FALSE)
+sample(20)
+prediction <- predict(model, newdata = )
+```
+
