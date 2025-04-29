@@ -33,6 +33,31 @@ lapply(files, load, envir = .GlobalEnv)
 #| message: false
 #| echo: false
 
+### DATA CLEANING ###
+
+## Standardize factor levels
+
+helper <- function(team) {
+  for (i in 22:24) {
+    dataP <- paste0(team, "_P", toString(i))
+    dataB <- paste0(team, "_B", toString(i))
+    relevel(get(dataP))
+    relevel(get(dataB))
+  }
+}
+
+relevel <- function(data) {
+  levels(data$PlayResult)[levels(data$PlayResult) == "SIngle"] <- "Single"
+}
+
+helper("NEB")
+```
+
+```{r}
+#| warning: false
+#| message: false
+#| echo: false
+
 ### DATA TRANSFORMATION FUNCTIONS ###
 
 # List variables to count
@@ -148,11 +173,6 @@ summarise_batter <- function(data, name) {
     )
 }
 ```
-
-```{r}
-
-```
-
 
 ```{r}
 #| warning: false
