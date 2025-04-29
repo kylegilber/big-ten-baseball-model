@@ -119,7 +119,7 @@ summarise_pitcher <- function(data, name) {
 }
 
 # Define summary function ∀ batters
-summarise_batter <- function(data, name) {
+summarise_batter <- function(data, name, year) {
   
   # Generate a data frame for each column
   counts <- map(cols, ~ data %>% 
@@ -136,21 +136,15 @@ summarise_batter <- function(data, name) {
     left_join(appearances, by = "Batter") %>% 
     mutate(
       
-      # Derive year
-      if (format(as.Date(Date), "%Y") == 2021) {rownum <- 1}
-      else if (format(as.Date(Date), "%Y") == 2022) {rownum <- 2}
-      else if (format(as.Date(Date), "%Y") == 2023) {rownum <- 3}
-      else if (format(as.Date(Date), "%Y") == 2024) {rownum <- 4}
-      else {rownum <- 5}
-        
       # Weighted on-base average (wOBA)
       wOBA = (
-        w[rownum,2] * Walk + 
-        w[rownum,3] * HitByPitch + 
-        w[rownum,4] * Single +
-        w[rownum,5] * Double + 
-        w[rownum,6] * tryCatch({Triple}, error = function(cond) {0}) +
-        w[rownum,7] * HomeRun) / 
+        w$wBB[which(w$Year == year)] * Walk + 
+        w$wHBP[which(w$Year == year)] * HitByPitch + 
+        w$w1B[which(w$Year == year)] * Single +
+        w$w2B[which(w$Year == year)] * Double + 
+        w$w3B[which(w$Year == year)] * 
+        tryCatch({Triple}, error = function(cond) {0}) +
+        w$wHR[which(w$Year == year)] * HomeRun) / 
         (PA + Walk + Sacrifice + HitByPitch),
       
       # Strikeout & walk percentage (K%, BB%)
@@ -204,7 +198,7 @@ merge_team_data <- function(year) {
     
     # Summarize batting statistics ∀ teams
     batting <- map2_dfr(
-      teams, teams, ~summarise_batter(get(paste0(.x, "_B", toString(year))), .y)
+      teams, teams, ~summarise_batter(get(paste0(.x, "_B", toString(year))), .y, paste0("20",year))
     )
     
     # Summarize pitching statistics ∀ teams
@@ -241,7 +235,7 @@ data <- rbind(data22,data23,data24)
 data$Year <- factor(data$Year)
 
 # Remove temporary variables
-rm(list = ls(pattern = "_"), batting, pitching, cols, summarise_batter)
+rm(list = ls(pattern = "_"), batting, pitching, cols, summarise_batter, w)
 rm(list = ls(pattern = "2"), summarise_pitcher, teams, files, helper, relevel)
 ```
 
@@ -315,7 +309,7 @@ train <- data[indices,]
 test <- data[-indices,]
 
 model <- glm(`Win%` ~ FIP_mean + K9_mean + BB9_mean + WHIP_mean + wOBA_mean + 
-  `K%_mean` + `BB%_mean` + ISO_mean + RBI + RA + Year, data = train)
+  `K%_mean` + `BB%_mean` + ISO_mean + RBI + RA, data = train)
 model <- stats::step(model, direction = "backward", trace = FALSE)
 
 prediction <- predict(model, newdata = test)
