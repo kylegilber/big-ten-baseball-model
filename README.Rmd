@@ -37,13 +37,13 @@ load("~/Github/big-ten-baseball-model/data25.RData")
 
 ### DATA TRANSFORMATION FUNCTIONS ###
 
-# List column variables to count
-cols <- list("PlayResult", "KorBB", "PitchCall")
+# List variables to count
+cols <- list("PlayResult", "KorBB", "PitchCall", "RunsScored")
 
 # Define summary function ∀ pitchers
 summarise_pitcher <- function(data, name) {
   
-  # Generate a data frame for each column
+  # Create a DF for each variable's counts
   counts <- map(cols, ~ data %>% 
       count(Pitcher, .data[[.x]]) %>% 
       pivot_wider(names_from = .data[[.x]], values_from = n, values_fill = 0))
@@ -61,20 +61,25 @@ summarise_pitcher <- function(data, name) {
       # Fielding independent pitching (FIP)
       FIP = (13*HomeRun + 3*(Walk + HitByPitch) - 2*Strikeout)/Innings + 4.22,
       
-      # # Strikeouts & walks per nine innings (K/9, BB/9)
+      # Strikeouts & walks per nine innings (K/9, BB/9)
       K9 = (Strikeout / Innings) * 9, BB9 = (Walk / Innings) * 9,
       
       # Walks & hits per inning pitched
       WHIP = (Walk + Single + Double + 
-        tryCatch({Triple}, error = function(cond) {0}) + HomeRun) / Innings
+        tryCatch({Triple}, error = function(cond) {0}) + HomeRun) / Innings,
+      
+      # Runs allowed
+      RA = `1` + 2*`2` + 3*`3` + 4*tryCatch({`4`}, error = function(cond) {0}),
+      
     ) %>% 
     
     # Filter pitchers by innings pitched
     filter(Innings >= 5) %>% 
     
-    # Summarize batting statistics across team
+    # Summarize pitching stats across team
     summarise(
       Team = name,
+      RA = sum(RA),
       across(
         c(FIP, K9, BB9, WHIP),
         list(
@@ -117,15 +122,20 @@ summarise_batter <- function(data, name) {
       
       # Isolated power (ISO)
       ISO = (Double + 2 * tryCatch({Triple}, error = function(cond) {0}) + 
-        3 * HomeRun) / PA
+        3 * HomeRun) / PA,
+      
+      # Runs batted in (RBI)
+      RBI = `1` + 2*`2` + 3*`3` + 4*tryCatch({`4`}, error = function(cond) {0})
+      
     ) %>% 
     
     # Filter batters by plate appearances
     filter(PA >= 10) %>% 
     
-    # Summarize batting statistics across team
+    # Summarize batting stats across team
     summarise(
       Team = name,
+      RBI = sum(RBI),
       across(
         c(wOBA, `K%`, `BB%`, ISO),
         list(
@@ -152,6 +162,12 @@ summarise_batter <- function(data, name) {
 MIN_GOP_H <- MIN_GOL_H
 MIN_GOP_T <- MIN_GOL_T
 rm(MIN_GOL_H, MIN_GOL_T)
+
+# Standardize factor levels
+levels(NEB_H$PlayResult)[levels(NEB_H$PlayResult) == "SIngle"] <- "Single"
+levels(NEB_T$PlayResult)[levels(NEB_T$PlayResult) == "SIngle"] <- "Single"
+levels(NEB_B$PlayResult)[levels(NEB_B$PlayResult) == "SIngle"] <- "Single"
+levels(NEB_P$PlayResult)[levels(NEB_P$PlayResult) == "SIngle"] <- "Single"
 ```
 
 
@@ -270,11 +286,17 @@ set.seed(123)
 size <- nrow(data24)
 
 # Perform train/test split
-indices <- sample(length(data24), prob = 0.7)
+indices <- sample(size, size = 0.7 * size)
+train <- data24[indices,]
+test <- data24[-indices,]
 
-model <- glm(`Win%` ~ . - `Win%`, data = data24, family = "gaussian") %>% 
+model <- glm(`Win%` ~ FIP_mean + K9_mean + BB9_mean + WHIP_mean + wOBA_mean + 
+  `K%_mean` + `BB%_mean` + ISO_mean, data = train) %>% 
   stats::step(model, direction = "backward", trace = FALSE)
-sample(20)
-prediction <- predict(model, newdata = )
+
+summary(model)
+
+prediction <- predict(model, newdata = test)
+prediction
 ```
 
