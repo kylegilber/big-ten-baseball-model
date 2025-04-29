@@ -23,11 +23,9 @@ library(knitr)
 library(tinytex)
 library(stats)
 
-# Load 2024 player data 
-load("~/Github/big-ten-baseball-model/data24.RData")
-
-# Load 2023 player data
-load("~/Github/big-ten-baseball-model/data23.RData")
+# Load season data
+files <- list.files("~/Github/big-ten-baseball-model/data", full.names = TRUE)
+lapply(files, load, envir = .GlobalEnv)
 ```
 
 ```{r}
@@ -152,17 +150,7 @@ summarise_batter <- function(data, name) {
 ```
 
 ```{r}
-#| warning: false
-#| message: false
-#| echo: false
 
-### DATA CLEANING ###
-
-# Standardize factor levels
-levels(NEB_H$PlayResult)[levels(NEB_H$PlayResult) == "SIngle"] <- "Single"
-levels(NEB_T$PlayResult)[levels(NEB_T$PlayResult) == "SIngle"] <- "Single"
-levels(NEB_B23$PlayResult)[levels(NEB_B23$PlayResult) == "SIngle"] <- "Single"
-levels(NEB_P23$PlayResult)[levels(NEB_P23$PlayResult) == "SIngle"] <- "Single"
 ```
 
 
