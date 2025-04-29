@@ -26,8 +26,8 @@ library(stats)
 # Load 2024 player data 
 load("~/Github/big-ten-baseball-model/data24.RData")
 
-# Load 2024 player data with updated 2025 rosters
-load("~/Github/big-ten-baseball-model/data25.RData")
+# Load 2023 player data
+load("~/Github/big-ten-baseball-model/data23.RData")
 ```
 
 ```{r}
@@ -158,16 +158,11 @@ summarise_batter <- function(data, name) {
 
 ### DATA CLEANING ###
 
-# Standardize variable names
-MIN_GOP_H <- MIN_GOL_H
-MIN_GOP_T <- MIN_GOL_T
-rm(MIN_GOL_H, MIN_GOL_T)
-
 # Standardize factor levels
 levels(NEB_H$PlayResult)[levels(NEB_H$PlayResult) == "SIngle"] <- "Single"
 levels(NEB_T$PlayResult)[levels(NEB_T$PlayResult) == "SIngle"] <- "Single"
-levels(NEB_B$PlayResult)[levels(NEB_B$PlayResult) == "SIngle"] <- "Single"
-levels(NEB_P$PlayResult)[levels(NEB_P$PlayResult) == "SIngle"] <- "Single"
+levels(NEB_B23$PlayResult)[levels(NEB_B23$PlayResult) == "SIngle"] <- "Single"
+levels(NEB_P23$PlayResult)[levels(NEB_P23$PlayResult) == "SIngle"] <- "Single"
 ```
 
 
@@ -180,7 +175,7 @@ levels(NEB_P$PlayResult)[levels(NEB_P$PlayResult) == "SIngle"] <- "Single"
 
 # List universities with baseball teams in the big ten conference in 2024
 teams <- list("ILL_ILL", "IU", "IOW_HAW", "MAR_TER", "MIC_WOL", "MIC_SPA", 
-  "MIN_GOP", "NEB", "NOR_CAT", "OSU_BUC", "PEN_NIT", "PUR_BOI", "RUT_SCA")
+  "MIN_GOL", "NEB", "NOR_CAT", "OSU_BUC", "PEN_NIT", "PUR_BOI", "RUT_SCA")
 
 ## 2024 ##
 
@@ -193,16 +188,16 @@ pitching <- map2_dfr(teams, teams, ~summarise_pitcher(get(paste0(.x, "_T")), .y)
 # Merge team pitching & batting data for 2025 rosters
 data24 <- pitching %>% left_join(batting, join_by(Team))
 
-## 2025 ##
+## 2023 ##
 
-# Summarize batting statistics for each team's 2025 roster
-batting <- map2_dfr(teams, teams, ~summarise_batter(get(paste0(.x, "_B")), .y))
+# Summarize batting statistics for each team's 2023 roster
+batting <- map2_dfr(teams, teams, ~summarise_batter(get(paste0(.x, "_B23")), .y))
 
-# Summarize pitching statistics for each team's 2025 roster
-pitching <- map2_dfr(teams, teams, ~summarise_pitcher(get(paste0(.x, "_P")), .y))
+# Summarize pitching statistics for each team's 2023 roster
+pitching <- map2_dfr(teams, teams, ~summarise_pitcher(get(paste0(.x, "_P23")), .y))
 
-# Merge team pitching & batting data for 2025 rosters
-data25 <- pitching %>% left_join(batting, join_by(Team))
+# Merge team pitching & batting data for 2023 rosters
+data23 <- pitching %>% left_join(batting, join_by(Team))
 
 # Remove temporary variables
 rm(batting, pitching, cols, summarise_batter, summarise_pitcher, teams,
@@ -221,8 +216,14 @@ data24$`Win%` <- c(0.750, 0.625, 0.583, 0.417, 0.583, 0.458, 0.458, 0.667, 0.167
   0.5, 0.5, 0.542, 0.25)
 
 # Add 2025 in-conference win %s to date 
-data25$`Win%` <- c(0.6, 0.522, 0.826, 0.3, 0.5, 0.45, 0.35, 0.4, 0.4, 0.15, 
-  0.522, 0.3, 0.4)
+data23$`Win%` <- c(0.5, 0.667, 0.652, 0.708, 0.542, 0.5, 0.5, 0.625, 0.167, 
+  0.375, 0.304, 0.458, 0.583)
+
+# Add year and merge
+data24$Year <- "2024"
+data23$Year <- "2023"
+data <- rbind(data24, data23)
+rm(data23, data24)
 ```
 
 ```{r}
@@ -235,8 +236,8 @@ data25$`Win%` <- c(0.6, 0.522, 0.826, 0.3, 0.5, 0.45, 0.35, 0.4, 0.4, 0.15,
 ## Table 1
 
 vars <- data.frame(
-  Variable = c("Win%","FIP","K9","BB9","WHIP","wOBA","K%","BB%","ISO"),
-  Type = c("Response", rep("Predictor", 8)),
+  Variable = c("Win%","FIP","K9","BB9","WHIP","wOBA","K%","BB%","ISO", "RA", "RBI"),
+  Type = c("Response", rep("Predictor", 10)),
   Explanation = c(
     "Conference Win Percentage - the number of regular season wins against 
     in-conference opponents divided by the total number of games against in-
@@ -256,9 +257,13 @@ vars <- data.frame(
     "Average Walk Percentage across players on the team with at least 10 plate 
     appearances",
     "Average Isolated Power (ISO) statistic across players on the team with at 
-    least plate appearances"),
+    least plate appearances",
+    "Runs Against (RA) - the number of times in the season an opponent made it 
+    around the bases to score a run",
+    "Runs (R) - the number of times in a season that a player on the team made 
+    it around the bases to score a run"),
   Value = c("0 ~ 1","2.89 ~ 12.22","1.5 ~ 15.43","0 ~ 12.86","0.44 ~ 2.47",
-    "0.07 ~ 0.46","0 ~ 0.52","0 ~ 0.4","0 ~ 0.5")
+    "0.07 ~ 0.46","0 ~ 0.52","0 ~ 0.4","0 ~ 0.5","239 ~ 330","208 ~ 436")
 )
 
 vars %>% 
@@ -283,18 +288,16 @@ vars %>%
 set.seed(123)
 
 # Get # rows in data
-size <- nrow(data24)
+size <- nrow(data)
 
 # Perform train/test split
-indices <- sample(size, size = 0.7 * size)
-train <- data24[indices,]
-test <- data24[-indices,]
+indices <- sample(size, size = 0.9 * size)
+train <- data[indices,]
+test <- data[-indices,]
 
 model <- glm(`Win%` ~ FIP_mean + K9_mean + BB9_mean + WHIP_mean + wOBA_mean + 
-  `K%_mean` + `BB%_mean` + ISO_mean, data = train) %>% 
-  stats::step(model, direction = "backward", trace = FALSE)
-
-summary(model)
+  `K%_mean` + `BB%_mean` + ISO_mean + RBI + RA, data = train)
+model <- stats::step(model, direction = "backward", trace = FALSE)
 
 prediction <- predict(model, newdata = test)
 prediction
