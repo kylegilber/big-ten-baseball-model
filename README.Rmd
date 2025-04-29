@@ -228,8 +228,14 @@ data24$Year <- "2024"
 data24$`Win%` <- c(0.750, 0.625, 0.583, 0.417, 0.583, 0.458, 0.458, 0.667, 0.167,
   0.5, 0.5, 0.542, 0.25)
 
+## 2025 ##
+data25 <- merge_team_data(25)
+data25$Year <- "2025"
+data25$`Win%` <- c(0.571,0.5,0.833,0.286,0.429,0.524,0.333,0.429,0.429,0.143,
+  0.5,0.333,0.429)
+
 # Merge season data by year
-data <- rbind(data22,data23,data24)
+data <- rbind(data22,data23,data24,data25)
 
 # Convert year var to factor type
 data$Year <- factor(data$Year)
@@ -304,7 +310,7 @@ set.seed(123)
 size <- nrow(data)
 
 # Perform train/test split
-indices <- sample(size, size = 0.8 * size)
+indices <- sample(size, size = 0.9 * size)
 train <- data[indices,]
 test <- data[-indices,]
 
@@ -314,5 +320,6 @@ model <- stats::step(model, direction = "backward", trace = FALSE)
 
 prediction <- predict(model, newdata = test)
 prediction
+test$`Win%`
 ```
 
