@@ -7,12 +7,10 @@ output:
     latex_engine: lualatex
 ---
 
-```{r}
+```{r Imports}
 #| warning: false
 #| message: false
 #| echo: false
-
-### IMPORTS ###
 
 # Add packages
 library(dplyr)
@@ -28,12 +26,10 @@ files <- list.files("~/Github/big-ten-baseball-model/data", full.names = TRUE)
 lapply(files, load, envir = .GlobalEnv)
 ```
 
-```{r}
+```{r Cleaning}
 #| warning: false
 #| message: false
 #| echo: false
-
-### DATA CLEANING ###
 
 ## Standardize factor levels
 
@@ -53,12 +49,10 @@ relevel <- function(data) {
 helper("NEB")
 ```
 
-```{r}
+```{r Transformations}
 #| warning: false
 #| message: false
 #| echo: false
-
-### DATA TRANSFORMATION FUNCTIONS ###
 
 # List variables to count
 cols <- list("PlayResult", "KorBB", "PitchCall", "RunsScored")
@@ -182,12 +176,10 @@ summarise_batter <- function(data, name, year) {
 }
 ```
 
-```{r}
+```{r Merging}
 #| warning: false
 #| message: false
 #| echo: false
-
-### DATA MERGING ###
 
 # List universities with baseball teams in the big ten conference
 teams <- list("ILL_ILL", "IU", "IOW_HAW", "MAR_TER", "MIC_SPA", "MIC_WOL", 
@@ -245,14 +237,10 @@ rm(list = ls(pattern = "_"), batting, pitching, cols, summarise_batter, w)
 rm(list = ls(pattern = "2"), summarise_pitcher, teams, files, helper, relevel)
 ```
 
-```{r}
+```{r Table 1}
 #| warning: false
 #| message: false
 #| echo: false
-
-### DATA VISUALIZATION ###
-
-## Table 1
 
 vars <- data.frame(
   Variable = c("Win%","FIP","K9","BB9","WHIP","wOBA","K%","BB%","ISO", "RA", "RBI"),
@@ -300,8 +288,14 @@ vars %>%
   ) %>% 
   column_spec(3, width = "8cm")
 ```
+```{r}
+
+```
 
 ```{r}
+#| warning: false
+#| message: false
+#| echo: false
 
 # Set seed for reproducibility
 set.seed(123)
@@ -321,5 +315,7 @@ model <- stats::step(model, direction = "backward", trace = FALSE)
 prediction <- predict(model, newdata = test)
 prediction
 test$`Win%`
+
+rm(indices, size, test, train, prediction, model)
 ```
 
