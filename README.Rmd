@@ -243,12 +243,12 @@ rm(list = ls(pattern = "2"), summarise_pitcher, teams, files, helper, relevel)
 #| echo: false
 
 vars <- data.frame(
-  Variable = c("Win%","FIP","K9","BB9","WHIP","wOBA","K%","BB%","ISO", "RA", "RBI"),
+  Variable = c("Win%","FIP","K9","BB9","WHIP","wOBA","K%","BB%","ISO", "RA", "R"),
   Type = c("Response", rep("Predictor", 10)),
   Explanation = c(
     "Conference Win Percentage - the number of regular season wins against 
-    in-conference opponents divided by the total number of games against in-
-    conference opponents multiplied by 100",
+    in-conference opponents divided by the total number of games against 
+    in-conference opponents multiplied by 100",
     "Average Fielding Independent Pitching (FIP) statistic across the team's 
     pithers with at least 5 innings pitched",
     "Average Strikouts Per Nine innings pitched (K/9) rate across across the
@@ -288,7 +288,10 @@ vars %>%
   ) %>% 
   column_spec(3, width = "8cm")
 ```
-```{r}
+```{r EDA}
+#| warning: false
+#| message: false
+#| echo: false
 
 ```
 
@@ -310,12 +313,16 @@ test <- data[-indices,]
 
 model <- glm(`Win%` ~ FIP_mean + K9_mean + BB9_mean + WHIP_mean + wOBA_mean + 
   `K%_mean` + `BB%_mean` + ISO_mean + RBI + RA, data = train)
-model <- stats::step(model, direction = "backward", trace = FALSE)
+#model <- stats::step(model, direction = "backward", trace = FALSE)
 
-prediction <- predict(model, newdata = test)
-prediction
-test$`Win%`
+preds <- predict(model, newdata = test, type = "response")
 
-rm(indices, size, test, train, prediction, model)
+# Plot histogram of predictions
+hist(preds, main = "Histogram of Predicted Win Percentage", xlab = "Predictions")
+
+summary(model)
+preds
+
+rm(indices, size, train, vars)
 ```
 
