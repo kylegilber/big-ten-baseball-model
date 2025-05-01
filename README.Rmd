@@ -7,12 +7,9 @@ output:
     latex_engine: lualatex
 ---
 
-```{r Imports}
-#| warning: false
-#| message: false
-#| echo: false
+```{r Imports, warning=FALSE, echo=FALSE}
 
-# Add packages
+# Import packages
 library(dplyr)
 library(tidyr)
 library(purrr)
@@ -20,33 +17,32 @@ library(kableExtra)
 library(knitr)
 library(tinytex)
 library(stats)
+library(stringr)
+library(betareg)
+library(pROC)
 
-# Load season data
+# Load data
 files <- list.files("~/Github/big-ten-baseball-model/data", full.names = TRUE)
-lapply(files, load, envir = .GlobalEnv)
+invisible(lapply(files, load, envir = .GlobalEnv))
 ```
+
+```{r Globals, echo=FALSE}
+
+# List teams in the big ten conference
+bigten.teams <- c("ILL_ILL", "IU", "IOW_HAW", "MAR_TER", "MIC_SPA", "MIC_WOL", 
+  "MIN_GOL", "NEB", "NOR_CAT", "OSU_BUC", "PEN_NIT", "PUR_BOI", "RUT_SCA")
+
+# Specify factors for frequency analysis
+factors <- list("PlayResult", "KorBB", "PitchCall", "RunsScored")
+```
+
 
 ```{r Cleaning}
 #| warning: false
 #| message: false
 #| echo: false
 
-## Standardize factor levels
 
-helper <- function(team) {
-  for (i in 22:24) {
-    dataP <- paste0(team, "_P", toString(i))
-    dataB <- paste0(team, "_B", toString(i))
-    relevel(get(dataP))
-    relevel(get(dataB))
-  }
-}
-
-relevel <- function(data) {
-  levels(data$PlayResult)[levels(data$PlayResult) == "SIngle"] <- "Single"
-}
-
-helper("NEB")
 ```
 
 ```{r Transformations}
@@ -54,16 +50,13 @@ helper("NEB")
 #| message: false
 #| echo: false
 
-# List variables to count
-cols <- list("PlayResult", "KorBB", "PitchCall", "RunsScored")
-
 # Define summary function ∀ pitchers
-summarise_pitcher <- function(data, name) {
+summarise_pitchers <- function(data, name) {
   
   # Create a DF for each variable's counts
   counts <- map(cols, ~ data %>% 
-      count(Pitcher, .data[[.x]]) %>% 
-      pivot_wider(names_from = .data[[.x]], values_from = n, values_fill = 0))
+    count(Pitcher, .data[[.x]]) %>% 
+    pivot_wider(names_from = .data[[.x]], values_from = n, values_fill = 0))
   
   # Count innings pitched ∀ pitchers
   innings <- data %>% 
@@ -102,18 +95,19 @@ summarise_pitcher <- function(data, name) {
         c(FIP, K9, BB9, WHIP),
         list(
           min = ~min(.x),
-          max = ~max(.x),
-          median = ~median(.x),
+          q1 = ~quantile(.x, probs = 0.25),
           mean = ~mean(.x),
-          mad = ~mad(.x, center = median(.x)),
-          stdev = ~sd(.x)
+          median = ~median(.x),
+          q3 = ~quantile(.x, probs = 0.75),
+          max = ~max(.x),
+          sd = ~sd(.x)
         )
       )
     )
 }
 
 # Define summary function ∀ batters
-summarise_batter <- function(data, name, year) {
+summarise_batters <- function(data, name, year) {
   
   # Generate a data frame for each column
   counts <- map(cols, ~ data %>% 
@@ -148,8 +142,8 @@ summarise_batter <- function(data, name, year) {
       ISO = (Double + 2 * tryCatch({Triple}, error = function(cond) {0}) + 
         3 * HomeRun) / PA,
       
-      # Runs batted in (RBI)
-      RBI = `1` + 2*`2` + 3*tryCatch({`3`}, error = function(cond) {0}) + 
+      # Runs (R)
+      R = `1` + 2*`2` + 3*tryCatch({`3`}, error = function(cond) {0}) + 
         4*tryCatch({`4`}, error = function(cond) {0})
       
     ) %>% 
@@ -160,16 +154,17 @@ summarise_batter <- function(data, name, year) {
     # Summarize batting stats across team
     summarise(
       Team = name,
-      RBI = sum(RBI),
+      R = sum(R),
       across(
         c(wOBA, `K%`, `BB%`, ISO),
         list(
           min = ~min(.x),
-          max = ~max(.x),
-          median = ~median(.x),
+          q1 = ~quantile(.x, probs = 0.25),
           mean = ~mean(.x),
-          mad = ~mad(.x, center = median(.x)),
-          stdev = ~sd(.x)
+          median = ~median(.x),
+          q3 = ~quantile(.x, probs = 0.75),
+          max = ~max(.x),
+          sd = ~sd(.x)
         )
       )
     )
@@ -180,10 +175,6 @@ summarise_batter <- function(data, name, year) {
 #| warning: false
 #| message: false
 #| echo: false
-
-# List universities with baseball teams in the big ten conference
-teams <- list("ILL_ILL", "IU", "IOW_HAW", "MAR_TER", "MIC_SPA", "MIC_WOL", 
-  "MIN_GOL", "NEB", "NOR_CAT", "OSU_BUC", "PEN_NIT", "PUR_BOI", "RUT_SCA")
 
 # Merge batting & pitching data ∀ teams
 merge_team_data <- function(year) {
@@ -288,12 +279,6 @@ vars %>%
   ) %>% 
   column_spec(3, width = "8cm")
 ```
-```{r EDA}
-#| warning: false
-#| message: false
-#| echo: false
-
-```
 
 ```{r}
 #| warning: false
@@ -303,26 +288,54 @@ vars %>%
 # Set seed for reproducibility
 set.seed(123)
 
-# Get # rows in data
-size <- nrow(data)
-
 # Perform train/test split
-indices <- sample(size, size = 0.9 * size)
+indices <- sample(nrow(data), size = 0.9 * nrow(data))
 train <- data[indices,]
 test <- data[-indices,]
 
-model <- glm(`Win%` ~ FIP_mean + K9_mean + BB9_mean + WHIP_mean + wOBA_mean + 
-  `K%_mean` + `BB%_mean` + ISO_mean + RBI + RA, data = train)
-#model <- stats::step(model, direction = "backward", trace = FALSE)
+# Train logistic regression model
+logistic.model <- glm(
+  `Win%` ~ FIP_mean + K9_mean + BB9_mean + WHIP_mean + wOBA_mean + `K%_mean` + 
+  `BB%_mean` + ISO_mean + RBI + RA, data = train
+)
 
-preds <- predict(model, newdata = test, type = "response")
+# Train beta regression model
+beta.model <- betareg(
+  `Win%` ~ FIP_mean + K9_mean + BB9_mean + WHIP_mean + wOBA_mean + `K%_mean` + 
+  `BB%_mean` + ISO_mean + RBI + RA, data = train
+)
+
+# Make predictions on test data
+logistic.pred <- predict(logistic.model, newdata = test, type = "response")
+beta.pred <- predict(beta.model, newdata = test, type = "response")
 
 # Plot histogram of predictions
-hist(preds, main = "Histogram of Predicted Win Percentage", xlab = "Predictions")
+hist(logistic.pred, main = "Histogram of Predicted Win %", xlab = "Logistic Predictions")
+hist(beta.pred, main = "Histogram of Predicted Win %", xlab = "Beta Predictions")
 
-summary(model)
-preds
+# Root mean squared error (RMSE)
+beta.RMSE <- sqrt(mean((test$`Win%` - beta.pred)^2))
 
-rm(indices, size, train, vars)
+# Mean absolute error (MAE)
+beta.MAE <- mean(abs(test$`Win%` - beta.pred))
+
+# Pseudo R squared
+summary(beta.model$pseudo.r.squared)
+
+test$`Win%`
+logistic.pred
+
+rm(indices, size, train, vars, model, i)
+rm(test, logistic.model, logistic.pred)
 ```
 
+```{r EDA}
+par(mfrow = c(2,4))
+
+for (i in 4:ncol(data)) {
+  if (is.numeric(data[[i]]) & grepl("mean", colnames(data)[i])) {
+    hist(data[[i]], xlab = colnames(data)[i], 
+      main = str_glue('Histogram of {colnames(data)[i]}'))
+  }
+}
+```
