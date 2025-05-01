@@ -42,7 +42,24 @@ factors <- list("PlayResult", "KorBB", "PitchCall", "RunsScored")
 #| message: false
 #| echo: false
 
+# Loop through global environment
+for (name in ls()) {
+  
+  # Get environment objects
+  object <- get(name)
+  
+  # Get data frame objects
+  if (is.data.frame(object) & name != "w") {
+    
+    # Filter in-conference game data
+    temp <- subset(object, HomeTeam %in% bigten.teams & AwayTeam %in% bigten.teams)
+    assign(name, temp)
+    
+  }
+}
 
+# Remove temporary variables
+rm(name, files, temp, object)
 ```
 
 ```{r Transformations}
