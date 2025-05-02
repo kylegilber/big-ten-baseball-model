@@ -34,6 +34,9 @@ bigten.teams <- c("ILL_ILL", "IU", "IOW_HAW", "MAR_TER", "MIC_SPA", "MIC_WOL",
 
 # Specify factors for frequency analysis
 factors <- list("PlayResult", "KorBB", "PitchCall", "RunsScored")
+
+# Specify grouping variables
+variables <- c("GameID", "HomeTeam", "AwayTeam", "Date")
 ```
 
 
@@ -82,23 +85,25 @@ freq <- function(data, type) {
   )
 }
 
-tempname <- function(data) {
+tempname <- function(data, year) {
   
   # Frequency analysis for factors
   pitcher.counts <- freq(data, Pitcher)
   batter.counts <- freq(data, Batter)
   
   # Derive innings-pitched pitcher statistic
-  IP <- data %>% distinct(GameID, Inning, Pitcher, PitcherTeam) %>% 
-    count(GameID, Pitcher, PitcherTeam, name = "IP")
+  IP <- data %>% distinct(!!!syms(variables), Inning, Pitcher, PitcherTeam) %>% 
+    count(!!!syms(variables), Date, Pitcher, PitcherTeam, name = "IP")
   
   # Derive plate appearances batting statistic
-  PA <- data %>% distinct(GameID, Batter, Inning, PAofInning) %>% 
-    count(GameID, Batter, name = "PA")
+  PA <- data %>% distinct(!!!syms(variables), Inning, PAofInning, Batter, BatterTeam) %>%
+    count(!!!syms(variables), Date, Batter, BatterTeam, name = "PA")
   
-  # Join on gameID and pitcher
-  left_join(IP, reduce(pitcher.counts, left_join, by = c("GameID", "Pitcher")),
-    by = c("GameID", "Pitcher")) %>% 
+  # Specify variables to join by
+  keys <- c("GameID", "Pitcher")
+  
+  # Join pitcher counts and innings pitched
+  pitcher.data <- left_join(IP, reduce(pitcher.counts, left_join, by = keys), by = keys) %>% 
     mutate(
       
       # Fielding independent pitching (FIP)
@@ -109,89 +114,30 @@ tempname <- function(data) {
       
       # Walks & hits per inning pitched
       WHIP = (Walk + Single + Double + 
-        tryCatch({Triple}, error = function(cond) {0}) + HomeRun) / IP,
-      
-      # Runs allowed
-      RA = `1` + 2*`2` + 3*tryCatch({`3`}, error = function(cond) {0}) + 
-        4*tryCatch({`4`}, error = function(cond) {0}),
-    )
-  
-}
-
-temp <- tempname(IOW_HAW_B24)
-
-# Define summary function ∀ pitchers
-summarise_pitchers <- function(data, name) {
-  
-  # Create a DF for each variable's counts
-  counts <- map(cols, ~ data %>% 
-    count(Pitcher, .data[[.x]]) %>% 
-    pivot_wider(names_from = .data[[.x]], values_from = n, values_fill = 0))
-  
-  # Count innings pitched ∀ pitchers
-  innings <- data %>% 
-    distinct(Pitcher, Inning, Date) %>% 
-    count(Pitcher, name = "Innings")
-  
-  # Join data frames by pitcher
-  reduce(counts, left_join, by = "Pitcher") %>% 
-    left_join(innings, by = "Pitcher") %>% 
-    mutate(
-      
-      # Fielding independent pitching (FIP)
-      FIP = (13*HomeRun + 3*(Walk + HitByPitch) - 2*Strikeout)/Innings + 4.22,
-      
-      # Strikeouts & walks per nine innings (K/9, BB/9)
-      K9 = (Strikeout / Innings) * 9, BB9 = (Walk / Innings) * 9,
-      
-      # Walks & hits per inning pitched
-      WHIP = (Walk + Single + Double + 
-        tryCatch({Triple}, error = function(cond) {0}) + HomeRun) / Innings,
-      
-      # Runs allowed
-      RA = `1` + 2*`2` + 3*tryCatch({`3`}, error = function(cond) {0}) + 
-        4*tryCatch({`4`}, error = function(cond) {0}),
-      
+        tryCatch({Triple}, error = function(cond) {0}) + HomeRun) / IP
     ) %>% 
     
-    # Filter pitchers by innings pitched
-    filter(Innings >= 5) %>% 
-    
-    # Summarize pitching stats across team
-    summarise(
-      Team = name,
-      RA = sum(RA),
+    # Summarize across both teams
+    reframe(
+      Date = Date,
+      HomeTeam = HomeTeam,
+      AwayTeam = AwayTeam,
       across(
         c(FIP, K9, BB9, WHIP),
-        list(
-          min = ~min(.x),
-          q1 = ~quantile(.x, probs = 0.25),
-          mean = ~mean(.x),
-          median = ~median(.x),
-          q3 = ~quantile(.x, probs = 0.75),
-          max = ~max(.x),
-          sd = ~sd(.x)
-        )
-      )
+        ~mean(.x[PitcherTeam == HomeTeam]),
+        .names = "Home_{.col}"),
+      across(
+        c(FIP, K9, BB9, WHIP),
+        ~mean(.x[PitcherTeam == AwayTeam]),
+        .names = "Away_{.col}"),
+      .by = GameID
     )
-}
-
-# Define summary function ∀ batters
-summarise_batters <- function(data, name, year) {
   
-  # Generate a data frame for each column
-  counts <- map(cols, ~ data %>% 
-      count(Batter, .data[[.x]]) %>% 
-      pivot_wider(names_from = .data[[.x]], values_from = n, values_fill = 0))
+  # Update keys for batter data
+  keys <- c("GameID", "Batter")
   
-  # Count plate attempts ∀ batters
-  appearances <- data %>% 
-    distinct(Batter, Inning, PAofInning, Date) %>% 
-    count(Batter, name = "PA")
-  
-  # Join data frames by batter
-  reduce(counts, left_join, by = "Batter") %>% 
-    left_join(appearances, by = "Batter") %>% 
+  # Join batter counts and plate appearances
+  batter.data <- left_join(PA, reduce(batter.counts, left_join, by = keys), by = keys) %>% 
     mutate(
       
       # Weighted on-base average (wOBA)
@@ -210,34 +156,28 @@ summarise_batters <- function(data, name, year) {
       
       # Isolated power (ISO)
       ISO = (Double + 2 * tryCatch({Triple}, error = function(cond) {0}) + 
-        3 * HomeRun) / PA,
-      
-      # Runs (R)
-      R = `1` + 2*`2` + 3*tryCatch({`3`}, error = function(cond) {0}) + 
-        4*tryCatch({`4`}, error = function(cond) {0})
-      
+        3 * HomeRun) / PA
     ) %>% 
-    
-    # Filter batters by plate appearances
-    filter(PA >= 10) %>% 
-    
-    # Summarize batting stats across team
-    summarise(
-      Team = name,
-      R = sum(R),
+
+    # Summarize across both teams
+    reframe(
+      Date = Date,
+      HomeTeam = HomeTeam,
+      AwayTeam = AwayTeam,
       across(
         c(wOBA, `K%`, `BB%`, ISO),
-        list(
-          min = ~min(.x),
-          q1 = ~quantile(.x, probs = 0.25),
-          mean = ~mean(.x),
-          median = ~median(.x),
-          q3 = ~quantile(.x, probs = 0.75),
-          max = ~max(.x),
-          sd = ~sd(.x)
-        )
-      )
+        ~mean(.x[BatterTeam == HomeTeam]),
+        .names = "Home_{.col}"),
+      across(
+        c(wOBA, `K%`, `BB%`, ISO),
+        ~mean(.x[BatterTeam == AwayTeam]),
+        .names = "Away_{.col}"),
+      .by = GameID
     )
+  
+  # Join batter and pitcher summary data
+  pitcher.data %>% left_join(batter.data, by = "GameID") %>% distinct() %>% select(-GameID)
+  
 }
 ```
 
