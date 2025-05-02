@@ -37,10 +37,7 @@ factors <- list("PlayResult", "KorBB", "PitchCall", "RunsScored")
 ```
 
 
-```{r Cleaning}
-#| warning: false
-#| message: false
-#| echo: false
+```{r Cleaning, warning=FALSE, echo=FALSE}
 
 # Loop through global environment
 for (name in ls()) {
@@ -49,12 +46,17 @@ for (name in ls()) {
   object <- get(name)
   
   # Get data frame objects
-  if (is.data.frame(object) & name != "w") {
+  if (is.data.frame(object) & grepl(paste(bigten.teams, collapse = "|"), name)) {
+    
+    # Remove "undefined" factor level
+    levels(object$PlayResult)[levels(object$PlayResult) == "Undefined"] <- NA
+    levels(object$KorBB)[levels(object$KorBB) == "Undefined"] <- NA
     
     # Filter in-conference game data
     temp <- subset(object, HomeTeam %in% bigten.teams & AwayTeam %in% bigten.teams)
     assign(name, temp)
     
+    ## LEVELS
   }
 }
 
@@ -62,10 +64,45 @@ for (name in ls()) {
 rm(name, files, temp, object)
 ```
 
-```{r Transformations}
-#| warning: false
-#| message: false
-#| echo: false
+```{r Transformations, echo=FALSE}
+
+# Define transformation function for game data
+
+# GAMEID | HOME TEAM | AWAY TEAM | HOME TEAM STATS | AWAY TEAM STATS
+
+tempname <- function(data) {
+  
+  # Perform frequency analysis for factors
+  counts <- map(factors, ~ data %>% 
+    count(GameID, Pitcher, .data[[.x]]) %>% 
+    pivot_wider(names_from = .data[[.x]], values_from = n, values_fill = 0))
+  
+  # Derive innings-pitched pitcher statistic
+  IP <- data %>% distinct(GameID, Inning, Pitcher) %>% 
+    count(GameID, Pitcher, name = "IP")
+  
+  # Join on game and pitcher
+  left_join(IP, reduce(counts, left_join, by = c("GameID", "Pitcher")),
+    by = c("GameID", "Pitcher")) %>% 
+    mutate(
+      
+      # Fielding independent pitching (FIP)
+      FIP = (13*HomeRun + 3*(Walk + HitByPitch) - 2*Strikeout) / IP + 4.22,
+      
+      # Strikeouts & walks per nine innings (K/9, BB/9)
+      K9 = (Strikeout / IP) * 9, BB9 = (Walk / IP) * 9,
+      
+      # Walks & hits per inning pitched
+      WHIP = (Walk + Single + Double + 
+        tryCatch({Triple}, error = function(cond) {0}) + HomeRun) / IP,
+      
+      # Runs allowed
+      RA = `1` + 2*`2` + 3*tryCatch({`3`}, error = function(cond) {0}) + 
+        4*tryCatch({`4`}, error = function(cond) {0}),
+    )
+}
+
+temp <- tempname(ILL_ILL_P22)
 
 # Define summary function ∀ pitchers
 summarise_pitchers <- function(data, name) {
