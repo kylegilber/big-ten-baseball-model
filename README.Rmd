@@ -70,19 +70,34 @@ rm(name, files, temp, object)
 
 # GAMEID | HOME TEAM | AWAY TEAM | HOME TEAM STATS | AWAY TEAM STATS
 
+# Define frequency analysis function
+freq <- function(data, type) {
+  map(factors, ~ data %>% 
+    count(GameID, {{type}}, .data[[.x]]) %>% 
+    pivot_wider(
+      names_from = .data[[.x]],
+      values_from = n,
+      values_fill = 0
+    )
+  )
+}
+
 tempname <- function(data) {
   
-  # Perform frequency analysis for factors
-  counts <- map(factors, ~ data %>% 
-    count(GameID, Pitcher, .data[[.x]]) %>% 
-    pivot_wider(names_from = .data[[.x]], values_from = n, values_fill = 0))
+  # Frequency analysis for factors
+  pitcher.counts <- freq(data, Pitcher)
+  batter.counts <- freq(data, Batter)
   
   # Derive innings-pitched pitcher statistic
-  IP <- data %>% distinct(GameID, Inning, Pitcher) %>% 
-    count(GameID, Pitcher, name = "IP")
+  IP <- data %>% distinct(GameID, Inning, Pitcher, PitcherTeam) %>% 
+    count(GameID, Pitcher, PitcherTeam, name = "IP")
   
-  # Join on game and pitcher
-  left_join(IP, reduce(counts, left_join, by = c("GameID", "Pitcher")),
+  # Derive plate appearances batting statistic
+  PA <- data %>% distinct(GameID, Batter, Inning, PAofInning) %>% 
+    count(GameID, Batter, name = "PA")
+  
+  # Join on gameID and pitcher
+  left_join(IP, reduce(pitcher.counts, left_join, by = c("GameID", "Pitcher")),
     by = c("GameID", "Pitcher")) %>% 
     mutate(
       
@@ -100,9 +115,10 @@ tempname <- function(data) {
       RA = `1` + 2*`2` + 3*tryCatch({`3`}, error = function(cond) {0}) + 
         4*tryCatch({`4`}, error = function(cond) {0}),
     )
+  
 }
 
-temp <- tempname(ILL_ILL_P22)
+temp <- tempname(IOW_HAW_B24)
 
 # Define summary function ∀ pitchers
 summarise_pitchers <- function(data, name) {
