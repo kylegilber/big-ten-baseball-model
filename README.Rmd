@@ -21,6 +21,7 @@ library(stringr)
 library(betareg)
 library(pROC)
 library(lubridate)
+library(caret)
 
 # Load data
 files <- list.files("~/Github/big-ten-baseball-model/data/", full.names = TRUE)
@@ -202,7 +203,7 @@ bigten.games$Result <- c(0,0,1,0,1,1,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,0,0,0,1,0,
   1,0,1,0,0,0)
 ```
 
-```{r Exploratory Data Analysis, echo=FALSE}
+```{r Univariate Analysis, echo=FALSE}
 
 # Define plot parameters
 par(mfrow = c(2,3))
@@ -214,7 +215,7 @@ for (var in pred.vars) {
   data <- unlist(bigten.games[,grep(var, names(bigten.games), value = TRUE)])
   
   # Create a histogram from the data
-  hist(data, main = paste("Histogram of", var), xlab = var)
+  hist(data, main = paste("Histogram of", var), xlab = paste(var, "values"))
 }
 
 ```
@@ -280,16 +281,40 @@ vars %>%
 # Set seed for reproducibility
 set.seed(123)
 
-# Perform train/test split
-indices <- sample(nrow(data), size = 0.9 * nrow(data))
-train <- data[indices,]
-test <- data[-indices,]
+# Perform 70/30 train-test split
+indices <- sample(nrow(bigten.games), size = 0.7 * nrow(bigten.games))
+train <- bigten.games[indices,]
+test <- bigten.games[-indices,]
 
-# Train logistic regression model
-logistic.model <- glm(
-  `Win%` ~ FIP_mean + K9_mean + BB9_mean + WHIP_mean + wOBA_mean + `K%_mean` + 
-  `BB%_mean` + ISO_mean + RBI + RA, data = train
-)
+# Define model predictors
+model.formula <- formula(Result ~ Home_FIP + Away_FIP + Home_WHIP + Away_WHIP + 
+  Home_K9 + Away_K9 + Home_BB9 + Away_BB9 + Home_wOBA + Away_wOBA + Home_ISO + 
+  Away_ISO + `Home_K%` + `Away_K%` + `Home_BB%` + `Away_BB%`)
+
+# Multiple linear regression model
+linear.model <- lm(model.formula, data = train)
+
+# Factorize 'result' response variable
+train$Result <- factor(train$Result)
+
+# Logistic regression model
+logistic.model <- glm(model.formula, family = binomial, data = train)
+
+# Predict test results
+linear.pred <- predict(linear.model, test[,1:16], type = "response") %>% round(0)
+logistic.pred <- predict(logistic.model, test[,1:16], type = "response") %>% round(0)
+
+# Create confusion matrices
+linear.conf <- confusionMatrix(as.factor(linear.pred), as.factor(test$Result))
+logistic.conf <- confusionMatrix(as.factor(logistic.pred), as.factor(test$Result))
+
+linear.conf$overall["Accuracy"]
+logistic.conf$overall["Accuracy"]
+
+
+
+
+
 
 # Train beta regression model
 beta.model <- betareg(
