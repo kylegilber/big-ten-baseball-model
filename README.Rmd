@@ -38,6 +38,9 @@ factors <- list("PlayResult", "KorBB", "PitchCall", "RunsScored")
 
 # Specify grouping variables
 variables <- c("GameID", "HomeTeam", "AwayTeam", "Date")
+
+# Specify predictor variable types
+pred.vars <- c("FIP", "WHIP", "wOBA", "ISO", "K9", "BB9")
 ```
 
 
@@ -199,7 +202,21 @@ bigten.games$Result <- c(0,0,1,0,1,1,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,0,0,0,1,0,
   1,0,1,0,0,0)
 ```
 
-```{r Exploratory Data Analysis}
+```{r Exploratory Data Analysis, echo=FALSE}
+
+# Define plot parameters
+par(mfrow = c(2,3))
+
+# Visualize predictor variables
+for (var in pred.vars) {
+  
+  # Combine home and away statistic values
+  data <- unlist(bigten.games[,grep(var, names(bigten.games), value = TRUE)])
+  
+  # Create a histogram from the data
+  hist(data, main = paste("Histogram of", var), xlab = var)
+}
+
 ```
 
 
@@ -302,15 +319,4 @@ logistic.pred
 
 rm(indices, size, train, vars, model, i)
 rm(test, logistic.model, logistic.pred)
-```
-
-```{r EDA}
-par(mfrow = c(2,4))
-
-for (i in 4:ncol(data)) {
-  if (is.numeric(data[[i]]) & grepl("mean", colnames(data)[i])) {
-    hist(data[[i]], xlab = colnames(data)[i], 
-      main = str_glue('Histogram of {colnames(data)[i]}'))
-  }
-}
 ```
