@@ -20,9 +20,10 @@ library(stats)
 library(stringr)
 library(betareg)
 library(pROC)
+library(lubridate)
 
 # Load data
-files <- list.files("~/Github/big-ten-baseball-model/data", full.names = TRUE)
+files <- list.files("~/Github/big-ten-baseball-model/data/", full.names = TRUE)
 invisible(lapply(files, load, envir = .GlobalEnv))
 ```
 
@@ -168,7 +169,6 @@ summarize.team <- function(data) {
   
   # Join batter and pitcher summary data
   pitcher.data %>% left_join(batter.data, by = "GameID") %>% distinct() %>% select(-GameID)
-  
 }
 ```
 
@@ -177,7 +177,18 @@ summarize.team <- function(data) {
 #| message: false
 #| echo: false
 
+# Summarize each team's in-conference game data
+bigten.team.data <- lapply(bigten.teams, function(team) {summarize.team(get(team))})
 
+# Merge in-conference game data for all teams
+bigten.games <- Reduce(rbind, bigten.team.data) %>% 
+  mutate(
+    Date = coalesce(Date.x, Date.y),
+    HomeTeam = coalesce(HomeTeam.x, HomeTeam.y),
+    AwayTeam = coalesce(AwayTeam.x, AwayTeam.y)
+  ) %>% 
+  select(-Date.x, -Date.y, -HomeTeam.x, -HomeTeam.y, -AwayTeam.x, -AwayTeam.y) %>% 
+  distinct()
 ```
 
 ```{r Table 1}
