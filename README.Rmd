@@ -58,8 +58,6 @@ for (name in ls()) {
     # Filter in-conference game data
     temp <- subset(object, HomeTeam %in% bigten.teams & AwayTeam %in% bigten.teams)
     assign(name, temp)
-    
-    ## LEVELS
   }
 }
 
@@ -68,10 +66,6 @@ rm(name, files, temp, object)
 ```
 
 ```{r Transformations, echo=FALSE}
-
-# Define transformation function for game data
-
-# GAMEID | HOME TEAM | AWAY TEAM | HOME TEAM STATS | AWAY TEAM STATS
 
 # Define frequency analysis function
 freq <- function(data, type) {
@@ -85,7 +79,8 @@ freq <- function(data, type) {
   )
 }
 
-tempname <- function(data, year) {
+# Define function to summarize team data
+summarize.team <- function(data) {
   
   # Frequency analysis for factors
   pitcher.counts <- freq(data, Pitcher)
@@ -115,6 +110,7 @@ tempname <- function(data, year) {
       # Walks & hits per inning pitched
       WHIP = (Walk + Single + Double + 
         tryCatch({Triple}, error = function(cond) {0}) + HomeRun) / IP
+      
     ) %>% 
     
     # Summarize across both teams
@@ -141,15 +137,9 @@ tempname <- function(data, year) {
     mutate(
       
       # Weighted on-base average (wOBA)
-      wOBA = (
-        w$wBB[which(w$Year == year)] * Walk + 
-        w$wHBP[which(w$Year == year)] * HitByPitch + 
-        w$w1B[which(w$Year == year)] * Single +
-        w$w2B[which(w$Year == year)] * Double + 
-        w$w3B[which(w$Year == year)] * 
-        tryCatch({Triple}, error = function(cond) {0}) +
-        w$wHR[which(w$Year == year)] * HomeRun) / 
-        (PA + Walk + Sacrifice + HitByPitch),
+      wOBA = (0.812*Walk + 0.838*HitByPitch + 0.943*Single + 1.245*Double + 
+        1.537*tryCatch({Triple}, error = function(cond) {0}) + 1.764*HomeRun) 
+        / (PA + Walk + Sacrifice + HitByPitch),
       
       # Strikeout & walk percentage (K%, BB%)
       `K%` = Strikeout / PA, `BB%` = Walk / PA,
@@ -157,6 +147,7 @@ tempname <- function(data, year) {
       # Isolated power (ISO)
       ISO = (Double + 2 * tryCatch({Triple}, error = function(cond) {0}) + 
         3 * HomeRun) / PA
+      
     ) %>% 
 
     # Summarize across both teams
@@ -186,56 +177,7 @@ tempname <- function(data, year) {
 #| message: false
 #| echo: false
 
-# Merge batting & pitching data ∀ teams
-merge_team_data <- function(year) {
-    
-    # Summarize batting statistics ∀ teams
-    batting <- map2_dfr(
-      teams, teams, ~summarise_batter(get(paste0(.x, "_B", toString(year))), .y, paste0("20",year))
-    )
-    
-    # Summarize pitching statistics ∀ teams
-    pitching <- map2_dfr(
-      teams, teams, ~summarise_pitcher(get(paste0(.x, "_P", toString(year))), .y)
-    )
-    
-    # Join batting & pitching by team
-    pitching %>% left_join(batting, join_by(Team))
-}
 
-## 2022 ##
-data22 <- merge_team_data(22)
-data22$Year <- "2022"
-data22$`Win%` <- c(0.708,0.417,0.708,0.783,0.333,0.5,0.25,0.417,0.417,0.364,
-  0.458,0.429,0.708)
-
-## 2023 ##
-data23 <- merge_team_data(23)
-data23$Year <- "2023"
-data23$`Win%` <- c(0.5, 0.667, 0.652, 0.708, 0.542, 0.5, 0.5, 0.625, 0.167, 
-  0.375, 0.304, 0.458, 0.583)
-
-## 2024 ##
-data24 <- merge_team_data(24)
-data24$Year <- "2024"
-data24$`Win%` <- c(0.750, 0.625, 0.583, 0.417, 0.583, 0.458, 0.458, 0.667, 0.167,
-  0.5, 0.5, 0.542, 0.25)
-
-## 2025 ##
-data25 <- merge_team_data(25)
-data25$Year <- "2025"
-data25$`Win%` <- c(0.571,0.5,0.833,0.286,0.429,0.524,0.333,0.429,0.429,0.143,
-  0.5,0.333,0.429)
-
-# Merge season data by year
-data <- rbind(data22,data23,data24,data25)
-
-# Convert year var to factor type
-data$Year <- factor(data$Year)
-
-# Remove temporary variables
-rm(list = ls(pattern = "_"), batting, pitching, cols, summarise_batter, w)
-rm(list = ls(pattern = "2"), summarise_pitcher, teams, files, helper, relevel)
 ```
 
 ```{r Table 1}
