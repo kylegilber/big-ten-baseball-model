@@ -41,7 +41,7 @@ variables <- c("GameID", "HomeTeam", "AwayTeam", "Date")
 ```
 
 
-```{r Cleaning, warning=FALSE, echo=FALSE}
+```{r Data Cleaning, warning=FALSE, echo=FALSE}
 
 # Loop through global environment
 for (name in ls()) {
@@ -66,7 +66,7 @@ for (name in ls()) {
 rm(name, files, temp, object)
 ```
 
-```{r Transformations, echo=FALSE}
+```{r Transformation Function, echo=FALSE}
 
 # Define frequency analysis function
 freq <- function(data, type) {
@@ -172,10 +172,7 @@ summarize.team <- function(data) {
 }
 ```
 
-```{r Merging}
-#| warning: false
-#| message: false
-#| echo: false
+```{r Data Transformation, warning=FALSE, echo=FALSE}
 
 # Summarize each team's in-conference game data
 bigten.team.data <- lapply(bigten.teams, function(team) {summarize.team(get(team))})
@@ -189,7 +186,22 @@ bigten.games <- Reduce(rbind, bigten.team.data) %>%
   ) %>% 
   select(-Date.x, -Date.y, -HomeTeam.x, -HomeTeam.y, -AwayTeam.x, -AwayTeam.y) %>% 
   distinct()
+
+# Remove incorrectly-dated game
+bigten.games <- bigten.games[-61, ]
+
+# Create 'result' column to store game result
+# Result stores 1 if the home team wins, otherwise 0
+bigten.games$Result <- c(0,0,1,0,1,1,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,0,0,0,1,0,
+  1,1,0,1,0,1,1,1,1,0,0,0,1,1,0,1,1,0,0,0,1,1,1,0,0,1,0,1,1,1,1,1,1,0,1,1,1,0,1,
+  0,1,1,1,1,0,1,0,1,0,1,0,0,0,0,0,0,1,1,1,1,1,1,1,0,1,1,0,1,1,0,0,1,1,0,0,1,0,0,
+  1,0,1,1,0,1,0,1,1,1,0,0,0,0,1,1,0,0,0,1,1,0,1,0,1,1,1,1,0,0,1,1,0,1,1,0,0,0,1,
+  1,0,1,0,0,0)
 ```
+
+```{r Exploratory Data Analysis}
+```
+
 
 ```{r Table 1}
 #| warning: false
