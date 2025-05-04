@@ -22,6 +22,7 @@ library(betareg)
 library(pROC)
 library(lubridate)
 library(caret)
+library(glue)
 
 # Load data
 files <- list.files("~/Github/big-ten-baseball-model/data/", full.names = TRUE)
@@ -227,34 +228,75 @@ for (var in pred.vars) {
 #| echo: false
 
 vars <- data.frame(
-  Variable = c("Win%","FIP","K9","BB9","WHIP","wOBA","K%","BB%","ISO", "RA", "R"),
-  Type = c("Response", rep("Predictor", 10)),
+  
+  # Variable names
+  Variable = c(
+    "Result", "Home.FIP", "Away.FIP", "Home.WHIP", "Away.WHIP", "Home.K9",
+    "Away.K9", "Home.BB9", "Away.BB9", "Home.wOBA", "Away.wOBA", "Home.ISO",
+    "Away.ISO", "Home.K%", "Away.K%", "Home.BB%", "Away.BB%"
+  ),
+  
+  # Variable type in the model
+  Type = c("Response", rep("Predictor", 16)),
+  
+  # An explanation of the variable
   Explanation = c(
-    "Conference Win Percentage - the number of regular season wins against 
-    in-conference opponents divided by the total number of games against 
-    in-conference opponents multiplied by 100",
-    "Average Fielding Independent Pitching (FIP) statistic across the team's 
-    pithers with at least 5 innings pitched",
-    "Average Strikouts Per Nine innings pitched (K/9) rate across across the
-    team's pithers with at least 5 innings pitched",
-    "Average Walks Per Nine inning pitched (BB/9) rate across the team's pithers 
-    with at least 5 innings pitched",
-    "Average Walks Plus Hits Per Innings Pitched (WHIP) statistic across the 
-    team's pithers with at least 5 innings pitched",
-    "Weighted On-Base Average (wOBA) statistic across players on the team with 
-    at least 10 plate appearances",
-    "Average Strikeout Percentage across players on the team with at least 10 
-    plate appearances",
-    "Average Walk Percentage across players on the team with at least 10 plate 
-    appearances",
-    "Average Isolated Power (ISO) statistic across players on the team with at 
-    least plate appearances",
-    "Runs Against (RA) - the number of times in the season an opponent made it 
-    around the bases to score a run",
-    "Runs (R) - the number of times in a season that a player on the team made 
-    it around the bases to score a run"),
-  Value = c("0 ~ 1","2.89 ~ 12.22","1.5 ~ 15.43","0 ~ 12.86","0.44 ~ 2.47",
-    "0.07 ~ 0.46","0 ~ 0.52","0 ~ 0.4","0 ~ 0.5","239 ~ 330","208 ~ 436")
+    "An indicator variable representing whether the home team (1) or the away team (0) won the game",
+    "Home team Fielding Independent Pitching (FIP) pitching statistic from the game",
+    "Away team Fielding Independent Pitching (FIP) pitching statistic from the game",
+    "Home team Walks + Hits per Inning Pitched (WHIP) pitching statistic from the game",
+    "Away team Walks + Hits per Inning Pitched (WHIP) pitching statistic from the game",
+    "Home team pitcher Strikeouts per Nine Innings (K9) rate from the game",
+    "Away team pitcher Strikeouts per Nine Innings (K9) rate from the game",
+    "Home team pitcher Walks per Nine Innings (BB9) rate from the game",
+    "Away team pitcher Walks per Nine Innings (BB9) rate from the game",
+    "Home team Weighted On-Base Average (wOBA) batting statistic from the game",
+    "Away team Weighted On-Base Average (wOBA) batting statistic from the game",
+    "Home team Isolated Power (ISO) batting statistic from the game",
+    "Away team Isolated Power (ISO) batting statistic from the game",
+    "Home team batter Strikeout Percentage (K%) from the game",
+    "Away team batter Strikeout Percentage (K%) from the game",
+    "Home team batter Walk Percentage (BB%) from the game",
+    "Away team batter Walk Percentage (BB%) from the game"
+  ),
+  
+  # Range of values for each variable
+  Value = c(
+    glue("0: {round(sum(bigten.games$Result) / nrow(bigten.games),2)*100}% 
+    1: {round(1 - (sum(bigten.games$Result) / nrow(bigten.games)),2)*100}%"),
+    glue("{round(min(bigten.games$Home_FIP), 2)} ~ 
+      {round(max(bigten.games$Home_FIP), 2)}"),
+    glue("{round(min(bigten.games$Away_FIP), 2)} ~ 
+      {round(max(bigten.games$Away_FIP), 2)}"),
+    glue("{round(min(bigten.games$Home_WHIP), 2)} ~ 
+      {round(max(bigten.games$Home_WHIP), 2)}"),
+    glue("{round(min(bigten.games$Away_WHIP), 2)} ~ 
+      {round(max(bigten.games$Away_WHIP), 2)}"),
+    glue("{round(min(bigten.games$Home_K9), 2)} ~ 
+      {round(max(bigten.games$Home_K9), 2)}"),
+    glue("{round(min(bigten.games$Away_K9), 2)} ~ 
+      {round(max(bigten.games$Away_K9), 2)}"),
+    glue("{round(min(bigten.games$Home_BB9), 2)} ~ 
+      {round(max(bigten.games$Home_BB9), 2)}"),
+    glue("{round(min(bigten.games$Away_BB9), 2)} ~ 
+      {round(max(bigten.games$Away_BB9), 2)}"),
+    glue("{round(min(bigten.games$Home_wOBA), 2)} ~ 
+      {round(max(bigten.games$Home_wOBA), 2)}"),
+    glue("{round(min(bigten.games$Away_wOBA), 2)} ~ 
+      {round(max(bigten.games$Away_wOBA), 2)}"),
+    glue("{round(min(bigten.games$Home_ISO), 2)} ~ 
+      {round(max(bigten.games$Home_ISO), 2)}"),
+    glue("{round(min(bigten.games$Away_ISO), 2)} ~ 
+      {round(max(bigten.games$Away_ISO), 2)}"),
+    glue("{round(min(bigten.games$`Home_K%`), 2)} ~ 
+      {round(max(bigten.games$`Home_K%`), 2)}"),
+    glue("{round(min(bigten.games$`Away_K%`), 2)} ~ 
+      {round(max(bigten.games$`Away_K%`), 2)}"),
+    glue("{round(min(bigten.games$`Home_BB%`), 2)} ~ 
+      {round(max(bigten.games$`Home_BB%`), 2)}"),
+    glue("{round(min(bigten.games$`Away_BB%`), 2)} ~ 
+      {round(max(bigten.games$`Away_BB%`), 2)}")
+  )
 )
 
 vars %>% 
@@ -273,10 +315,7 @@ vars %>%
   column_spec(3, width = "8cm")
 ```
 
-```{r}
-#| warning: false
-#| message: false
-#| echo: false
+```{r Modeling, echo=FALSE}
 
 # Set seed for reproducibility
 set.seed(123)
@@ -345,3 +384,11 @@ logistic.pred
 rm(indices, size, train, vars, model, i)
 rm(test, logistic.model, logistic.pred)
 ```
+```{r Table 2}
+
+model.summary <- data.frame(
+  Model = c("Linear Regression", "Logistic Regression"),
+  
+)
+```
+
