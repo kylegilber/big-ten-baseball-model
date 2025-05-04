@@ -1,13 +1,14 @@
 ---
-title: "2025 Big Ten Baseball Standings Predictor"
-author: "kylegilber"
+title: "How do player performance statistics affect the outcome of a Big Ten Conference baseball game?"
+author: "Kyle Gilbert"
 date: "`r Sys.Date()`"
 output: 
   pdf_document:
     latex_engine: lualatex
+    number_sections: true
 ---
 
-```{r Imports, warning=FALSE, echo=FALSE}
+```{r Imports, warning=FALSE, message=FALSE, echo=FALSE}
 
 # Import packages
 library(dplyr)
@@ -204,28 +205,47 @@ bigten.games$Result <- c(0,0,1,0,1,1,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,0,0,0,1,0,
   1,0,1,0,0,0)
 ```
 
-```{r Univariate Analysis, echo=FALSE}
+# Introduction
 
-# Define plot parameters
-par(mfrow = c(2,3))
+# Exploratory Data Analysis
 
-# Visualize predictor variables
-for (var in pred.vars) {
-  
-  # Combine home and away statistic values
-  data <- unlist(bigten.games[,grep(var, names(bigten.games), value = TRUE)])
-  
-  # Create a histogram from the data
-  hist(data, main = paste("Histogram of", var), xlab = paste(var, "values"))
-}
+## Variable Description
 
-```
+The response variable represents the outcome of a Big Ten Conference baseball game. As an indicator variable, the response value `1` indicates the home team won the game, whereas a response value of `0` means the away team emerged victorious. The predictors comprise 8 player performance statistics for each team, which amounts to 16 continuous explanatory variables. Refer to Table 1 for additional details.
+
+Fielding Independent Pitching (FIP) quantifies a pitcher's performance solely based on the aspects of the game a pitcher controls, which are determined to be home runs (HR), walks (BB), hit-by-pitches (HBP), and strikeouts (K). The following formula for calculating FIP includes a constant that scales this statistic to that of Earned Run Average (ERA). 
+$$
+FIP = \frac{13\times HR + 3(BB + HBP) - 2 \times K}{IP} + constant
+$$
+Walks plus Hits per Inning Pitched (WHIP) measures a pitcher's ability to prevent hitters from reaching base, as base runners pose a scoring threat. The WHIP formula below accounts for pitchers allowing a base runner via a walk, single (1B), double (2B), triple (3B), or home run.
+$$
+WHIP = \frac{BB + 1B + 2B + 3B + HR}{IP}
+$$
+Strikeouts per Nine Innings (K/9) is the average number of strikeouts a pitcher has for every nine innings pitched. This rate statistic offers insight into the pitcher's ability to strike batters out; however, relief pitchers often have a higher K/9 than starting pitchers because relievers throw for a shorter duration, which enables them to exert more force on each pitch.
+$$
+K/9 = \frac{K}{IP} \times 9
+$$
+Walks per Nine Innings (BB/9) is the average number of walks a pitcher gives up for every nine innings pitched. This rate statistic captures how often a pitcher allows a base runner through a walk.
+$$
+BB/9 = \frac{BB}{IP} \times 9
+$$
+Weighted On-Base Average (wOBA) evaluates a batter's performance by weighting the batting events that result in a batter reaching base with the 2024 season's adjusted run expectancy for each event.
+$$
+wOBA = \frac{0.812 \times BB + 0.838 \times HBP + 0.943 \times 1B + 1.245 \times 2B + 1.537 \times 3B + 1.764 \times HR}{AB + SF + BB + HBP}
+$$
+Isolated Power (ISO) considers extra-base hits to express a batter's power, as hits longer than a double signify powerful hits. The ISO formula gives more weight to longer extra-base hits and averages these hits over the number of at-bats.
+$$
+ISO = \frac{2B + 2 \times 3B + 3 \times HR}{AB}
+$$
+Strikeout Percentage (K%) is the frequency at which a batter strikes out, whereas Walk Percentage (BB%) is the frequency at which a batter earns a walk. These rate statistics assess a hitter's plate discipline.
+
+$$
+K\% = \frac{K}{AB} \qquad \qquad BB\% = \frac{BB}{AB}
+$$
 
 
-```{r Table 1}
-#| warning: false
-#| message: false
-#| echo: false
+
+```{r Table 1, echo=FALSE}
 
 vars <- data.frame(
   
@@ -315,7 +335,24 @@ vars %>%
   column_spec(3, width = "8cm")
 ```
 
-```{r Modeling, echo=FALSE}
+```{r Univariate Analysis, echo=FALSE}
+
+# Define plot parameters
+par(mfrow = c(2,3))
+
+# Visualize predictor variables
+for (var in pred.vars) {
+  
+  # Combine home and away statistic values
+  data <- unlist(bigten.games[,grep(var, names(bigten.games), value = TRUE)])
+  
+  # Create a histogram from the data
+  hist(data, main = paste("Histogram of", var), xlab = paste(var, "values"))
+}
+
+```
+
+```{r Modeling, message=FALSE, warning=FALSE, echo=FALSE}
 
 # Set seed for reproducibility
 set.seed(123)
@@ -350,44 +387,13 @@ logistic.conf <- confusionMatrix(as.factor(logistic.pred), as.factor(test$Result
 linear.conf$overall["Accuracy"]
 logistic.conf$overall["Accuracy"]
 
-
-
-
-
-
-# Train beta regression model
-beta.model <- betareg(
-  `Win%` ~ FIP_mean + K9_mean + BB9_mean + WHIP_mean + wOBA_mean + `K%_mean` + 
-  `BB%_mean` + ISO_mean + RBI + RA, data = train
-)
-
-# Make predictions on test data
-logistic.pred <- predict(logistic.model, newdata = test, type = "response")
-beta.pred <- predict(beta.model, newdata = test, type = "response")
-
-# Plot histogram of predictions
-hist(logistic.pred, main = "Histogram of Predicted Win %", xlab = "Logistic Predictions")
-hist(beta.pred, main = "Histogram of Predicted Win %", xlab = "Beta Predictions")
-
-# Root mean squared error (RMSE)
-beta.RMSE <- sqrt(mean((test$`Win%` - beta.pred)^2))
-
-# Mean absolute error (MAE)
-beta.MAE <- mean(abs(test$`Win%` - beta.pred))
-
-# Pseudo R squared
-summary(beta.model$pseudo.r.squared)
-
-test$`Win%`
-logistic.pred
-
 rm(indices, size, train, vars, model, i)
 rm(test, logistic.model, logistic.pred)
 ```
-```{r Table 2}
+```{r Table 2, echo=FALSE}
 
 model.summary <- data.frame(
-  Model = c("Linear Regression", "Logistic Regression"),
+  Model = c("Linear Regression", "Logistic Regression")
   
 )
 ```
