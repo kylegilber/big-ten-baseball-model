@@ -456,7 +456,7 @@ linear.step <- stats::step(linear.model, direction = "both", trace = 0)
 train$Result <- factor(train$Result)
 
 # Logistic regression model
-logistic.model <- glm(model.formula, family = binomial, data = train)
+logistic.model <- glm(model.formula, family = binomial(link = "logit"), data = train)
 logistic.step <- stats::step(logistic.model, direcion = "both", trace = 0)
 
 # Predict test results
@@ -478,8 +478,59 @@ rm(test, logistic.model, logistic.pred)
 ```{r Table 2, echo=FALSE}
 
 model.summary <- data.frame(
-  Model = c("Linear Regression", "Logistic Regression")
+  Model = c(
+    "Linear Regression",
+    "Linear with Stepwise Regression",
+    "Logistic Regression",
+    "Logistic with Stepwise Regression"
+  ),
+  
+  Accuracy = c(
+    round(linear.conf$overall["Accuracy"],2),
+    round(linear.step.conf$overall["Accuracy"],2),
+    round(logistic.conf$overall["Accuracy"],2),
+    round(logistic.step.conf$overall["Accuracy"],2)
+  ),
+  
+  Sensitivity = c(
+    round(linear.conf$byClass["Sensitivity"],2),
+    round(linear.step.conf$byClass["Sensitivity"],2),
+    round(logistic.conf$byClass["Sensitivity"],2),
+    round(logistic.step.conf$byClass["Sensitivity"],2)
+  ),
+  
+  Specificity = c(
+    round(linear.conf$byClass["Specificity"],2),
+    round(linear.step.conf$byClass["Specificity"],2),
+    round(logistic.conf$byClass["Specificity"],2),
+    round(logistic.step.conf$byClass["Specificity"],2)
+  ),
+  
+  Precision = c(
+    round(linear.conf$byClass["Precision"],2),
+    round(linear.step.conf$byClass["Precision"],2),
+    round(logistic.conf$byClass["Precision"],2),
+    round(logistic.step.conf$byClass["Precision"],2)
+  )
   
 )
+
+model.summary %>% 
+  knitr::kable(
+    caption = "Model Comparison",
+    align = "l",
+  ) %>% 
+  kableExtra::kable_styling(
+    position = "center",
+    bootstrap_options = c("striped")
+  ) %>% 
+  kable_classic(
+    html_font = "Cambria",
+    full_width = FALSE
+  )
+
 ```
 
+## Model Selection
+
+We summarized the performance of each classification model with a confusion matrix and extracted accuracy, sensitivity, specificity, and precision from it. We utilized these rates to compare the models, and it is evident that the linear regression model with stepwise regression applied to it achieves the best results.
