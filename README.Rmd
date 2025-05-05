@@ -389,7 +389,7 @@ hist(ISO.after, main = "ISO after Yeo-Johnson", xlab = "Transformed ISO values")
 
 ### Multivariate Analysis
 
-
+We visually compare the response variable with each home team predictor to determine if relationships exist between them. Figure 2 depicts box and whisker plots of each home team statistic with respect to the game's result, where a value of 1 indicates that the home team won the game. We chose to include only the home team variables to preserve space, but we can assume the discernible relationships between the home team and the result hold for the away team. All box plots show overlapping interquartile ranges and whiskers, which we interpret to mean that each predictor does not solely contribute to a winning result since the overlap conveys that the home team has both won and lost when recording similar predictor values. Nevertheless, we can still derive insight into response-predictor relationships from the median box plot lines. In regards to Fielding Independent Pitching (FIP), we associate lower values with a result of 1 - the winning team. Similarly, for Walks plus Hits per Inning Pitched (WHIP), we expect to see a smaller value for the indicator of the winning team. Lower values of Walks per Nine Innings (BB/9) and Strikeout Percentage (K%) are also associated with a result of 1. However, we expect higher values associated with the winning side for the rest of the predictors.
 
 ```{r Multivariate Analysis, echo=FALSE, fig.height=9, fig.width=9}
 
