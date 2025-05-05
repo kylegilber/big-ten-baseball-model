@@ -361,6 +361,28 @@ for (var in pred.vars) {
 \caption{Histogram of each predictor type. Refer to Table 1 for variable name meanings.}
 \end{figure}
 
+```{r Box-Cox Transformation, echo=FALSE}
+
+# Define plot parameters
+par(mfrow = c(1,2))
+
+# Combine home and away ISO values
+ISO.before <- unlist(bigten.games[,grep("ISO", names(bigten.games), value = TRUE)])
+
+# Apply Box-Cox transformation
+boxcox <- caret::BoxCoxTrans(ISO.before)
+
+# Predict values
+ISO.after <- predict(boxcox, ISO.before)
+
+# ISO histogram before transformation
+hist(ISO.before, main = "ISO before Box-Cox transformation", xlab = "ISO values")
+
+# ISO histogram after transformation
+hist(ISO.after, main = "ISO after Box-Cox transformation", xlab = "Transformed ISO values")
+```
+
+
 ```{r Modeling, message=FALSE, warning=FALSE, echo=FALSE}
 
 # Set seed for reproducibility
