@@ -1,5 +1,5 @@
 ---
-title: "How do team statistics affect which team wins a Big Ten Conference baseball game? - "
+title: "How do team statistics affect which team wins a Big Ten Conference baseball game?"
 author: "Kyle Gilbert"
 date: "`r Sys.Date()`"
 output: 
@@ -216,6 +216,8 @@ The goal of Division I baseball teams in the Big Ten Conference is to win games.
 
 The response variable represents the outcome of a Big Ten Conference baseball game. As an indicator variable, the response value `1` indicates the home team won the game, whereas a response value of `0` means the away team emerged victorious. The predictors comprise 8 player performance statistics for each team, which amounts to 16 continuous explanatory variables. Refer to Table 1 for additional details.
 
+### Variable Formulas
+
 Fielding Independent Pitching (FIP) quantifies a pitcher's performance solely based on the aspects of the game a pitcher controls, which are determined to be home runs (HR), walks (BB), hit-by-pitches (HBP), and strikeouts (K). The following formula for calculating FIP includes a constant that scales this statistic to that of Earned Run Average (ERA). 
 $$
 FIP = \frac{13\times HR + 3(BB + HBP) - 2 \times K}{IP} + constant
@@ -415,7 +417,24 @@ for (var in pred.vars) {
 \caption{Boxplot of each home team predictor with respect to the response variable `Result`.}
 \end{figure}
 
+# Modeling
+
+Due to the model's response variable being an indicator variable, we constructed both a logistic and a linear regression model, using stepwise regression with forward selection and backward elimination to retain the meaningful explanatory variables. For linear regression, the response variable `Results` was numerical in type, whereas `Results` was factorized before logistic modeling. We converted these models' predictions to either 0 or 1 at a threshold of 0.5 to enable comparison with the response variable's binary values. The stepwise process concluded that Home_FIP, Home_WHIP, Home_wOBA, Away_ISO, and Home_BB% contribute the most to explaining the variability in the linear model's response. Accordingly, our linear model after stepwise regression is given by:
+
+$$
+P(Result_i = 1 | Home.FIP,\; Home.WHIP,\; Home.wOBA,\; Away.ISO,\; Home.BB\%) = π_i
+$$
+
+The stepwise function on the logistic model deduced that Away_FIP, Home_wOBA, Away_wOBA, Home_BB%, and Away_BB% contribute the most to explaining the variability in the response, which resulted in this logistic model:
+
+$$
+P(Result_i = 1 | Away.FIP,\; Home.wOBA,\; Away.wOBA,\; Home.BB\%,\; Away.BB\%) = π_i
+$$
+
 ```{r Modeling, message=FALSE, warning=FALSE, echo=FALSE}
+
+# Remove temporary variables
+rm(list = ls(pattern = "_"), NEB, IU, powt, w, var, data, freq)
 
 # Set seed for reproducibility
 set.seed(123)
@@ -425,30 +444,32 @@ indices <- sample(nrow(bigten.games), size = 0.7 * nrow(bigten.games))
 train <- bigten.games[indices,]
 test <- bigten.games[-indices,]
 
-# Define model predictors
 model.formula <- formula(Result ~ Home_FIP + Away_FIP + Home_WHIP + Away_WHIP + 
   Home_K9 + Away_K9 + Home_BB9 + Away_BB9 + Home_wOBA + Away_wOBA + Home_ISO + 
   Away_ISO + `Home_K%` + `Away_K%` + `Home_BB%` + `Away_BB%`)
 
 # Multiple linear regression model
 linear.model <- lm(model.formula, data = train)
+linear.step <- stats::step(linear.model, direction = "both", trace = 0)
 
 # Factorize 'result' response variable
 train$Result <- factor(train$Result)
 
 # Logistic regression model
 logistic.model <- glm(model.formula, family = binomial, data = train)
+logistic.step <- stats::step(logistic.model, direcion = "both", trace = 0)
 
 # Predict test results
 linear.pred <- predict(linear.model, test[,1:16], type = "response") %>% round(0)
+linear.step.pred <- predict(linear.step, test[,1:16], type = "response") %>% round(0)
 logistic.pred <- predict(logistic.model, test[,1:16], type = "response") %>% round(0)
+logistic.step.pred <- predict(logistic.step, test[,1:16], type = "response") %>% round(0)
 
 # Create confusion matrices
 linear.conf <- confusionMatrix(as.factor(linear.pred), as.factor(test$Result))
+linear.step.conf <- confusionMatrix(as.factor(linear.step.pred), as.factor(test$Result))
 logistic.conf <- confusionMatrix(as.factor(logistic.pred), as.factor(test$Result))
-
-linear.conf$overall["Accuracy"]
-logistic.conf$overall["Accuracy"]
+logistic.step.conf <- confusionMatrix(as.factor(logistic.step.pred), as.factor(test$Result))
 
 rm(indices, size, train, vars, model, i)
 rm(test, logistic.model, logistic.pred)
