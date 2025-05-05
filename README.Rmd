@@ -1,5 +1,5 @@
 ---
-title: "How do player performance statistics affect the outcome of a Big Ten Conference baseball game?"
+title: "How do team statistics affect which team wins a Big Ten Conference baseball game? - "
 author: "Kyle Gilbert"
 date: "`r Sys.Date()`"
 output: 
@@ -207,6 +207,8 @@ bigten.games$Result <- c(0,0,1,0,1,1,1,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,0,0,0,1,0,
 ```
 
 # Introduction
+
+The goal of Division I baseball teams in the Big Ten Conference is to win games. In 2024, the conference schedule consisted of 24 games, which meant that each Big Ten team would play against another team in the conference 24 times. Winning is important, as the eight teams in the conference with the highest win percentage at the end of the regular season advance to the Big Ten baseball tournament. Yet, the recipe for success is not as simple as scoring more runs than the opposing team. Although every team would like to be an offensive powerhouse - hitting a record number of home runs - and have shutout pitching, this is not the reality for most teams in the Big Ten. Instead, teams rely on maximizing their batting and pitching performance to increase their success, but which specific areas should teams focus on to most improve their chances of winning? We propose a regression model to decide which team performance statistic(s) contribute the most to winning an in-conference baseball game.
 
 # Exploratory Data Analysis
 
