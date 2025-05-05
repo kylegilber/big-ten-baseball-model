@@ -534,3 +534,8 @@ model.summary %>%
 ## Model Selection
 
 We summarized the performance of each classification model with a confusion matrix and extracted accuracy, sensitivity, specificity, and precision from it. We utilized these rates to compare the models, and it is evident that the linear regression model with stepwise regression applied to it achieves the best results.
+
+```{r}
+
+```
+
