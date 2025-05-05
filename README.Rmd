@@ -387,6 +387,31 @@ hist(ISO.before, main = "ISO before Yeo-Johnson", xlab = "ISO values")
 hist(ISO.after, main = "ISO after Yeo-Johnson", xlab = "Transformed ISO values")
 ```
 
+### Multivariate Analysis
+
+
+
+```{r Multivariate Analysis, echo=FALSE, fig.height=9, fig.width=9}
+
+# Define plot parameters
+par(mfrow = c(3,3))
+
+# Visualize response-predictor relationships
+for (var in pred.vars) {
+  
+  # Create box plots for each variable
+  boxplot(
+    get(paste0("Home_", var)) ~ Result,
+    data = bigten.games,
+    main = paste0("Boxplot of Home.", var),
+    ylab = paste0("Home.", var, " values")
+  )
+}
+```
+
+\begin{figure}[ht]
+\caption{Boxplot of each home team predictor with respect to the response variable `Result`.}
+\end{figure}
 
 ```{r Modeling, message=FALSE, warning=FALSE, echo=FALSE}
 
